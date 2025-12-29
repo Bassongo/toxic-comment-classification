@@ -1,1 +1,21 @@
+# Data processing
+pandas==2.1.0
+numpy==1.24.3
 
+# NLP
+nltk==3.8.1
+scikit-learn==1.3.0
+
+# Models
+xgboost==2.0.0
+
+# Visualization
+matplotlib==3.7.2
+seaborn==0.12.2
+plotly==5.17.0
+
+# Dashboard
+streamlit==1.28.0
+
+# Utils
+tqdm==4.66.1
