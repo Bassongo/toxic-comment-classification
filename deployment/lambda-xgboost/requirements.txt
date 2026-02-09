@@ -1,0 +1,9 @@
+mangum==0.17.0
+fastapi==0.104.1
+pandas>=2.2.0
+numpy>=2.0.0
+scikit-learn>=1.4.0
+xgboost>=2.0.0
+nltk==3.8.1
+boto3>=1.34.0
+pydantic>=2.5.0

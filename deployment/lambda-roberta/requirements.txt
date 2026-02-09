@@ -1,0 +1,7 @@
+mangum==0.17.0
+fastapi==0.104.1
+torch==2.1.0
+transformers==4.35.0
+boto3==1.34.0
+pydantic==2.5.0
+numpy==1.26.2

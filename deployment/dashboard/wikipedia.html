@@ -1,0 +1,938 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Analyse Wikipedia - Toxic Comment Classifier</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(180deg, #0a0a0a 0%, #1a0a0a 50%, #0a0a0a 100%);
+            min-height: 100vh;
+            color: #e2e8f0;
+        }
+
+        .nav-bar {
+            background: linear-gradient(135deg, #1a0505 0%, #2d0a0a 50%, #1a0505 100%);
+            padding: 15px 30px;
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            border-bottom: 1px solid rgba(220, 38, 38, 0.3);
+        }
+
+        .nav-link {
+            color: #fca5a5;
+            text-decoration: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            border: 1px solid transparent;
+        }
+
+        .nav-link:hover {
+            background: rgba(220, 38, 38, 0.2);
+            border-color: rgba(220, 38, 38, 0.5);
+        }
+
+        .nav-link.active {
+            background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+            color: white;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            padding: 30px 0;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            background: linear-gradient(135deg, #ef4444 0%, #f97316 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: #94a3b8;
+            font-size: 1.1rem;
+        }
+
+        .control-panel {
+            background: rgba(30, 41, 59, 0.8);
+            border-radius: 16px;
+            padding: 24px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            margin-bottom: 30px;
+        }
+
+        .control-panel h3 {
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .wiki-icon {
+            width: 32px;
+            height: 32px;
+        }
+
+        .control-row {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+        }
+
+        .control-group {
+            flex: 1;
+            min-width: 200px;
+        }
+
+        .control-group label {
+            display: block;
+            color: #94a3b8;
+            font-size: 0.85rem;
+            margin-bottom: 8px;
+        }
+
+        .control-group select,
+        .control-group input {
+            width: 100%;
+            padding: 12px 16px;
+            background: #0f172a;
+            border: 2px solid #334155;
+            border-radius: 10px;
+            color: white;
+            font-size: 1rem;
+            outline: none;
+        }
+
+        .control-group select:focus,
+        .control-group input:focus {
+            border-color: #6366f1;
+        }
+
+        .btn-group {
+            display: flex;
+            gap: 15px;
+            margin-top: 10px;
+        }
+
+        .btn {
+            padding: 14px 28px;
+            border: none;
+            border-radius: 10px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, #f59e0b 0%, #ef4444 100%);
+            color: white;
+        }
+
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(245, 158, 11, 0.3);
+        }
+
+        .btn-secondary {
+            background: #334155;
+            color: #e2e8f0;
+        }
+
+        .btn-secondary:hover {
+            background: #475569;
+        }
+
+        .btn-danger {
+            background: #dc2626;
+            color: white;
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .stats-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .stat-box {
+            background: rgba(30, 41, 59, 0.8);
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .stat-box.analyzing {
+            border-color: #3b82f6;
+            animation: pulse-border 2s infinite;
+        }
+
+        @keyframes pulse-border {
+            0%, 100% { border-color: #3b82f6; }
+            50% { border-color: #60a5fa; }
+        }
+
+        .stat-value {
+            font-size: 2rem;
+            font-weight: 700;
+        }
+
+        .stat-value.toxic { color: #ef4444; }
+        .stat-value.clean { color: #10b981; }
+        .stat-value.total { color: #3b82f6; }
+        .stat-value.rate { color: #f59e0b; }
+
+        .stat-label {
+            color: #94a3b8;
+            font-size: 0.85rem;
+            margin-top: 5px;
+        }
+
+        .progress-section {
+            background: rgba(30, 41, 59, 0.8);
+            border-radius: 16px;
+            padding: 24px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            margin-bottom: 30px;
+        }
+
+        .progress-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .progress-bar-container {
+            height: 12px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 6px;
+            overflow: hidden;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #3b82f6, #8b5cf6);
+            border-radius: 6px;
+            transition: width 0.3s;
+        }
+
+        .charts-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(350px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .chart-card {
+            background: rgba(30, 41, 59, 0.8);
+            border-radius: 16px;
+            padding: 24px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .chart-card h4 {
+            margin-bottom: 15px;
+            color: #e2e8f0;
+        }
+
+        .comments-section {
+            background: rgba(30, 41, 59, 0.8);
+            border-radius: 16px;
+            padding: 24px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .comments-section h3 {
+            margin-bottom: 20px;
+        }
+
+        .tabs {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+
+        .tab {
+            padding: 10px 20px;
+            background: transparent;
+            border: 1px solid #334155;
+            border-radius: 8px;
+            color: #94a3b8;
+            cursor: pointer;
+            transition: all 0.3s;
+        }
+
+        .tab.active {
+            background: #334155;
+            color: white;
+            border-color: #6366f1;
+        }
+
+        .tab .count {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 2px 8px;
+            border-radius: 10px;
+            margin-left: 8px;
+            font-size: 0.8rem;
+        }
+
+        .tab.toxic .count { background: rgba(239, 68, 68, 0.3); }
+        .tab.clean .count { background: rgba(16, 185, 129, 0.3); }
+
+        .comments-list {
+            max-height: 500px;
+            overflow-y: auto;
+        }
+
+        .comment-item {
+            background: rgba(15, 23, 42, 0.5);
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-left: 4px solid;
+        }
+
+        .comment-item.toxic {
+            border-color: #ef4444;
+        }
+
+        .comment-item.clean {
+            border-color: #10b981;
+        }
+
+        .comment-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .comment-user {
+            color: #60a5fa;
+            font-weight: 600;
+        }
+
+        .comment-meta {
+            display: flex;
+            gap: 15px;
+            font-size: 0.8rem;
+            color: #64748b;
+        }
+
+        .comment-text {
+            color: #e2e8f0;
+            line-height: 1.5;
+            margin-bottom: 10px;
+        }
+
+        .comment-footer {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+        }
+
+        .badge {
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .badge.toxic {
+            background: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+        }
+
+        .badge.clean {
+            background: rgba(16, 185, 129, 0.2);
+            color: #10b981;
+        }
+
+        .badge.lang {
+            background: rgba(59, 130, 246, 0.2);
+            color: #60a5fa;
+        }
+
+        .prob-bar {
+            width: 100px;
+            height: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+            overflow: hidden;
+            display: inline-block;
+            vertical-align: middle;
+            margin-left: 8px;
+        }
+
+        .prob-fill {
+            height: 100%;
+            border-radius: 3px;
+        }
+
+        .prob-fill.toxic { background: #ef4444; }
+        .prob-fill.clean { background: #10b981; }
+
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(15, 23, 42, 0.9);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            display: none;
+        }
+
+        .loading-overlay.active {
+            display: flex;
+        }
+
+        .spinner-large {
+            width: 60px;
+            height: 60px;
+            border: 4px solid rgba(255, 255, 255, 0.1);
+            border-top-color: #f59e0b;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin-bottom: 20px;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .loading-text {
+            color: #e2e8f0;
+            font-size: 1.2rem;
+        }
+
+        .loading-sub {
+            color: #64748b;
+            font-size: 0.9rem;
+            margin-top: 10px;
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: rgba(255, 255, 255, 0.05);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: #334155;
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: #475569;
+        }
+
+        @media (max-width: 768px) {
+            .control-row {
+                flex-direction: column;
+            }
+
+            .btn-group {
+                flex-direction: column;
+            }
+
+            .charts-row {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <nav class="nav-bar">
+        <a href="/" class="nav-link">Analyseur</a>
+        <a href="/dashboard.html" class="nav-link">Dashboard</a>
+        <a href="/wikipedia.html" class="nav-link active">Wikipedia Live</a>
+    </nav>
+
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="spinner-large"></div>
+        <div class="loading-text" id="loadingText">Chargement...</div>
+        <div class="loading-sub" id="loadingSub"></div>
+    </div>
+
+    <div class="container">
+        <div class="header">
+            <h1>Analyse Wikipedia en Temps Reel</h1>
+            <p>Analysez les modifications recentes de Wikipedia pour detecter les commentaires toxiques</p>
+        </div>
+
+        <!-- Control Panel -->
+        <div class="control-panel">
+            <h3>
+                <svg class="wiki-icon" viewBox="0 0 24 24" fill="currentColor">
+                    <path d="M12.09 13.119c-.936 1.932-2.217 4.548-2.853 5.728-.616 1.074-1.127.931-1.532.029-1.406-3.321-4.293-9.144-5.651-12.409-.251-.601-.441-.987-.619-1.139-.181-.15-.554-.24-1.122-.271C.103 5.033 0 4.982 0 4.898v-.455l.052-.045c.924-.005 5.401 0 5.401 0l.051.045v.434c0 .119-.075.176-.225.176l-.564.031c-.485.029-.727.164-.727.436 0 .135.053.33.166.601 1.082 2.646 4.818 10.521 4.818 10.521l.136.046 2.411-4.81-.482-1.067-1.658-3.264s-.318-.654-.428-.872c-.728-1.443-.712-1.518-1.447-1.617-.207-.023-.313-.05-.313-.149v-.468l.06-.045h4.292l.113.037v.451c0 .105-.076.15-.227.15l-.308.047c-.792.061-.661.381-.136 1.422l1.582 3.252 1.758-3.504c.293-.64.233-.801.111-.947-.07-.084-.305-.22-.812-.24l-.201-.021c-.052 0-.098-.015-.145-.051-.045-.031-.067-.076-.067-.129v-.427l.061-.045c1.247-.008 4.043 0 4.043 0l.059.045v.436c0 .121-.059.178-.193.178-.646.03-.782.095-1.023.439-.12.186-.375.589-.646 1.039l-2.301 4.273-.065.135 2.792 5.712.17.048 4.396-10.438c.154-.422.129-.722-.064-.895-.197-.172-.346-.273-.857-.295l-.42-.016c-.061 0-.105-.014-.152-.045-.043-.029-.072-.075-.072-.119v-.436l.059-.045h4.961l.041.045v.437c0 .119-.074.18-.209.18-.648.03-1.127.18-1.443.421-.314.255-.557.616-.736 1.067 0 0-4.043 9.258-5.426 12.339-.525 1.007-1.053.917-1.503-.031-.571-1.171-1.773-3.786-2.646-5.71l.053-.036z"/>
+                </svg>
+                Configuration de l'analyse
+            </h3>
+            <div class="control-row">
+                <div class="control-group">
+                    <label>Edition Wikipedia</label>
+                    <select id="wikiLang">
+                        <option value="fr">Francais (fr.wikipedia.org)</option>
+                        <option value="en">Anglais (en.wikipedia.org)</option>
+                        <option value="de">Allemand (de.wikipedia.org)</option>
+                        <option value="es">Espagnol (es.wikipedia.org)</option>
+                        <option value="it">Italien (it.wikipedia.org)</option>
+                        <option value="ar">Arabe (ar.wikipedia.org)</option>
+                    </select>
+                </div>
+                <div class="control-group">
+                    <label>Nombre de modifications a analyser</label>
+                    <select id="numChanges">
+                        <option value="10">10 modifications</option>
+                        <option value="25" selected>25 modifications</option>
+                        <option value="50">50 modifications</option>
+                        <option value="100">100 modifications</option>
+                    </select>
+                </div>
+                <div class="control-group">
+                    <label>Modele d'analyse</label>
+                    <select id="modelSelect">
+                        <option value="multilingual">Multilingue (recommande)</option>
+                        <option value="xgboost">XGBoost (anglais)</option>
+                        <option value="roberta">RoBERTa (anglais)</option>
+                    </select>
+                </div>
+            </div>
+            <div class="btn-group">
+                <button class="btn btn-primary" id="startBtn" onclick="startAnalysis()">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <polygon points="5 3 19 12 5 21 5 3"></polygon>
+                    </svg>
+                    Lancer l'analyse
+                </button>
+                <button class="btn btn-secondary" id="stopBtn" onclick="stopAnalysis()" disabled>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <rect x="6" y="6" width="12" height="12"></rect>
+                    </svg>
+                    Arreter
+                </button>
+                <button class="btn btn-secondary" onclick="clearResults()">
+                    Effacer les resultats
+                </button>
+            </div>
+        </div>
+
+        <!-- Stats -->
+        <div class="stats-row">
+            <div class="stat-box" id="statBox">
+                <div class="stat-value total" id="statTotal">0</div>
+                <div class="stat-label">Commentaires analyses</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-value toxic" id="statToxic">0</div>
+                <div class="stat-label">Toxiques detectes</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-value clean" id="statClean">0</div>
+                <div class="stat-label">Commentaires propres</div>
+            </div>
+            <div class="stat-box">
+                <div class="stat-value rate" id="statRate">0%</div>
+                <div class="stat-label">Taux de toxicite</div>
+            </div>
+        </div>
+
+        <!-- Progress -->
+        <div class="progress-section" id="progressSection" style="display: none;">
+            <div class="progress-header">
+                <span id="progressText">Analyse en cours...</span>
+                <span id="progressPercent">0%</span>
+            </div>
+            <div class="progress-bar-container">
+                <div class="progress-bar-fill" id="progressBar" style="width: 0%"></div>
+            </div>
+        </div>
+
+        <!-- Charts -->
+        <div class="charts-row">
+            <div class="chart-card">
+                <h4>Repartition des resultats</h4>
+                <canvas id="pieChart"></canvas>
+            </div>
+            <div class="chart-card">
+                <h4>Evolution en temps reel</h4>
+                <canvas id="lineChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Comments -->
+        <div class="comments-section">
+            <h3>Commentaires de modification analyses</h3>
+            <div class="tabs">
+                <button class="tab active" onclick="filterComments('all')">
+                    Tous <span class="count" id="countAll">0</span>
+                </button>
+                <button class="tab toxic" onclick="filterComments('toxic')">
+                    Toxiques <span class="count" id="countToxic">0</span>
+                </button>
+                <button class="tab clean" onclick="filterComments('clean')">
+                    Propres <span class="count" id="countClean">0</span>
+                </button>
+            </div>
+            <div class="comments-list" id="commentsList">
+                <p style="text-align: center; color: #64748b; padding: 40px;">
+                    Lancez une analyse pour voir les resultats ici
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'https://0hik6heuhc.execute-api.us-east-1.amazonaws.com/prod';
+
+        let isAnalyzing = false;
+        let comments = [];
+        let currentFilter = 'all';
+        let pieChart, lineChart;
+        let timelineData = [];
+
+        // Initialize charts
+        function initCharts() {
+            const pieCtx = document.getElementById('pieChart').getContext('2d');
+            pieChart = new Chart(pieCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Toxiques', 'Propres'],
+                    datasets: [{
+                        data: [0, 0],
+                        backgroundColor: ['#ef4444', '#10b981'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { color: '#94a3b8' }
+                        }
+                    }
+                }
+            });
+
+            const lineCtx = document.getElementById('lineChart').getContext('2d');
+            lineChart = new Chart(lineCtx, {
+                type: 'line',
+                data: {
+                    labels: [],
+                    datasets: [{
+                        label: 'Taux de toxicite (%)',
+                        data: [],
+                        borderColor: '#f59e0b',
+                        backgroundColor: 'rgba(245, 158, 11, 0.1)',
+                        fill: true,
+                        tension: 0.4
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        x: {
+                            ticks: { color: '#94a3b8' },
+                            grid: { color: 'rgba(255,255,255,0.05)' }
+                        },
+                        y: {
+                            min: 0,
+                            max: 100,
+                            ticks: { color: '#94a3b8' },
+                            grid: { color: 'rgba(255,255,255,0.05)' }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            labels: { color: '#94a3b8' }
+                        }
+                    }
+                }
+            });
+        }
+
+        async function fetchWikipediaChanges(lang, limit) {
+            // Use Wikipedia API to get recent changes
+            const url = `https://${lang}.wikipedia.org/w/api.php?` +
+                `action=query&list=recentchanges&rcprop=title|user|comment|timestamp` +
+                `&rclimit=${limit}&rctype=edit&format=json&origin=*`;
+
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+                return data.query.recentchanges.filter(rc => rc.comment && rc.comment.trim().length > 5);
+            } catch (error) {
+                console.error('Error fetching Wikipedia:', error);
+                return [];
+            }
+        }
+
+        async function analyzeComment(text, model) {
+            let endpoint;
+            switch(model) {
+                case 'xgboost': endpoint = '/xgboost/predict'; break;
+                case 'roberta': endpoint = '/roberta/predict'; break;
+                default: endpoint = '/multilingual/predict';
+            }
+
+            try {
+                const response = await axios.post(`${API_BASE}${endpoint}`, { text }, {
+                    headers: { 'Content-Type': 'application/json' },
+                    timeout: 60000
+                });
+
+                const data = response.data;
+                let toxicProb;
+
+                if (data.toxic_probability !== undefined) {
+                    toxicProb = data.toxic_probability;
+                } else if (data.summary && data.summary.severity_score !== undefined) {
+                    toxicProb = data.summary.severity_score;
+                } else if (data.labels && data.labels.toxic) {
+                    toxicProb = data.labels.toxic.probability;
+                } else {
+                    toxicProb = data.is_toxic ? 0.9 : 0.1;
+                }
+
+                return {
+                    isToxic: data.is_toxic,
+                    probability: toxicProb,
+                    language: data.language_detected || 'unknown'
+                };
+            } catch (error) {
+                console.error('Analysis error:', error);
+                return null;
+            }
+        }
+
+        async function startAnalysis() {
+            if (isAnalyzing) return;
+
+            isAnalyzing = true;
+            document.getElementById('startBtn').disabled = true;
+            document.getElementById('stopBtn').disabled = false;
+            document.getElementById('progressSection').style.display = 'block';
+            document.getElementById('statBox').classList.add('analyzing');
+
+            const wikiLang = document.getElementById('wikiLang').value;
+            const numChanges = parseInt(document.getElementById('numChanges').value);
+            const model = document.getElementById('modelSelect').value;
+
+            showLoading('Recuperation des modifications Wikipedia...', `Edition: ${wikiLang}.wikipedia.org`);
+
+            // Fetch Wikipedia changes
+            const changes = await fetchWikipediaChanges(wikiLang, numChanges);
+
+            if (changes.length === 0) {
+                hideLoading();
+                alert('Aucune modification trouvee. Essayez une autre edition.');
+                stopAnalysis();
+                return;
+            }
+
+            hideLoading();
+            updateProgress(0, changes.length);
+
+            // Analyze each comment
+            for (let i = 0; i < changes.length && isAnalyzing; i++) {
+                const change = changes[i];
+
+                document.getElementById('progressText').textContent =
+                    `Analyse: "${change.comment.substring(0, 50)}..."`;
+
+                const result = await analyzeComment(change.comment, model);
+
+                if (result && isAnalyzing) {
+                    const comment = {
+                        id: Date.now() + i,
+                        text: change.comment,
+                        user: change.user,
+                        title: change.title,
+                        timestamp: change.timestamp,
+                        isToxic: result.isToxic,
+                        probability: result.probability,
+                        language: result.language
+                    };
+
+                    comments.unshift(comment);
+                    updateStats();
+                    updateCharts();
+                    renderComments();
+                }
+
+                updateProgress(i + 1, changes.length);
+
+                // Small delay to not overwhelm the API
+                await new Promise(resolve => setTimeout(resolve, 200));
+            }
+
+            stopAnalysis();
+        }
+
+        function stopAnalysis() {
+            isAnalyzing = false;
+            document.getElementById('startBtn').disabled = false;
+            document.getElementById('stopBtn').disabled = true;
+            document.getElementById('statBox').classList.remove('analyzing');
+            document.getElementById('progressText').textContent = 'Analyse terminee';
+        }
+
+        function updateProgress(current, total) {
+            const percent = Math.round((current / total) * 100);
+            document.getElementById('progressBar').style.width = percent + '%';
+            document.getElementById('progressPercent').textContent = percent + '%';
+        }
+
+        function updateStats() {
+            const total = comments.length;
+            const toxic = comments.filter(c => c.isToxic).length;
+            const clean = total - toxic;
+            const rate = total > 0 ? Math.round((toxic / total) * 100) : 0;
+
+            document.getElementById('statTotal').textContent = total;
+            document.getElementById('statToxic').textContent = toxic;
+            document.getElementById('statClean').textContent = clean;
+            document.getElementById('statRate').textContent = rate + '%';
+
+            document.getElementById('countAll').textContent = total;
+            document.getElementById('countToxic').textContent = toxic;
+            document.getElementById('countClean').textContent = clean;
+
+            // Update timeline
+            timelineData.push(rate);
+            if (timelineData.length > 20) timelineData.shift();
+        }
+
+        function updateCharts() {
+            const toxic = comments.filter(c => c.isToxic).length;
+            const clean = comments.length - toxic;
+
+            pieChart.data.datasets[0].data = [toxic, clean];
+            pieChart.update();
+
+            lineChart.data.labels = timelineData.map((_, i) => i + 1);
+            lineChart.data.datasets[0].data = timelineData;
+            lineChart.update();
+        }
+
+        function renderComments() {
+            const list = document.getElementById('commentsList');
+            let filtered = comments;
+
+            if (currentFilter === 'toxic') {
+                filtered = comments.filter(c => c.isToxic);
+            } else if (currentFilter === 'clean') {
+                filtered = comments.filter(c => !c.isToxic);
+            }
+
+            if (filtered.length === 0) {
+                list.innerHTML = '<p style="text-align: center; color: #64748b; padding: 40px;">Aucun commentaire</p>';
+                return;
+            }
+
+            list.innerHTML = filtered.map(c => `
+                <div class="comment-item ${c.isToxic ? 'toxic' : 'clean'}">
+                    <div class="comment-header">
+                        <span class="comment-user">${escapeHtml(c.user)}</span>
+                        <div class="comment-meta">
+                            <span>Article: ${escapeHtml(c.title)}</span>
+                            <span>${new Date(c.timestamp).toLocaleString()}</span>
+                        </div>
+                    </div>
+                    <div class="comment-text">${escapeHtml(c.text)}</div>
+                    <div class="comment-footer">
+                        <span class="badge ${c.isToxic ? 'toxic' : 'clean'}">
+                            ${c.isToxic ? 'TOXIQUE' : 'PROPRE'}
+                        </span>
+                        <span class="badge lang">${c.language.toUpperCase()}</span>
+                        <span style="color: #94a3b8; font-size: 0.85rem;">
+                            Probabilite: ${(c.probability * 100).toFixed(1)}%
+                            <span class="prob-bar">
+                                <span class="prob-fill ${c.isToxic ? 'toxic' : 'clean'}" style="width: ${c.probability * 100}%"></span>
+                            </span>
+                        </span>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function filterComments(filter) {
+            currentFilter = filter;
+            document.querySelectorAll('.tab').forEach(tab => tab.classList.remove('active'));
+            event.target.classList.add('active');
+            renderComments();
+        }
+
+        function clearResults() {
+            comments = [];
+            timelineData = [];
+            updateStats();
+            updateCharts();
+            renderComments();
+            document.getElementById('progressSection').style.display = 'none';
+        }
+
+        function showLoading(text, sub) {
+            document.getElementById('loadingText').textContent = text;
+            document.getElementById('loadingSub').textContent = sub || '';
+            document.getElementById('loadingOverlay').classList.add('active');
+        }
+
+        function hideLoading() {
+            document.getElementById('loadingOverlay').classList.remove('active');
+        }
+
+        function escapeHtml(text) {
+            const div = document.createElement('div');
+            div.textContent = text;
+            return div.innerHTML;
+        }
+
+        // Initialize
+        initCharts();
+    </script>
+</body>
+</html>

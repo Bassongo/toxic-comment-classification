@@ -1,0 +1,974 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard - Toxic Comment Classifier</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/axios/dist/axios.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(180deg, #0a0a0a 0%, #1a0a0a 50%, #0a0a0a 100%);
+            min-height: 100vh;
+            color: #e2e8f0;
+        }
+
+        .nav-bar {
+            background: linear-gradient(135deg, #1a0505 0%, #2d0a0a 50%, #1a0505 100%);
+            padding: 15px 30px;
+            display: flex;
+            justify-content: center;
+            gap: 30px;
+            border-bottom: 1px solid rgba(220, 38, 38, 0.3);
+        }
+
+        .nav-link {
+            color: #fca5a5;
+            text-decoration: none;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+            border: 1px solid transparent;
+        }
+
+        .nav-link:hover {
+            background: rgba(220, 38, 38, 0.2);
+            border-color: rgba(220, 38, 38, 0.5);
+        }
+
+        .nav-link.active {
+            background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+            color: white;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        .header {
+            text-align: center;
+            padding: 30px 0;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.5rem;
+            background: linear-gradient(135deg, #ef4444 0%, #f97316 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: #94a3b8;
+            font-size: 1.1rem;
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .stat-card {
+            background: rgba(30, 41, 59, 0.8);
+            border-radius: 16px;
+            padding: 24px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            text-align: center;
+            transition: transform 0.3s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-5px);
+        }
+
+        .stat-card.toxic {
+            border-left: 4px solid #ef4444;
+        }
+
+        .stat-card.clean {
+            border-left: 4px solid #10b981;
+        }
+
+        .stat-card.total {
+            border-left: 4px solid #3b82f6;
+        }
+
+        .stat-card.avg {
+            border-left: 4px solid #f59e0b;
+        }
+
+        .stat-value {
+            font-size: 2.5rem;
+            font-weight: 700;
+            margin-bottom: 8px;
+        }
+
+        .stat-card.toxic .stat-value { color: #ef4444; }
+        .stat-card.clean .stat-value { color: #10b981; }
+        .stat-card.total .stat-value { color: #3b82f6; }
+        .stat-card.avg .stat-value { color: #f59e0b; }
+
+        .stat-label {
+            color: #94a3b8;
+            font-size: 0.9rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .charts-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .chart-card {
+            background: rgba(30, 41, 59, 0.8);
+            border-radius: 16px;
+            padding: 24px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .chart-card h3 {
+            margin-bottom: 20px;
+            color: #e2e8f0;
+            font-size: 1.2rem;
+        }
+
+        .model-comparison {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+
+        .model-card {
+            background: rgba(30, 41, 59, 0.8);
+            border-radius: 16px;
+            padding: 24px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            position: relative;
+            overflow: hidden;
+        }
+
+        .model-card::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 4px;
+        }
+
+        .model-card.xgboost::before { background: linear-gradient(90deg, #059669, #10b981); }
+        .model-card.roberta::before { background: linear-gradient(90deg, #dc2626, #f97316); }
+        .model-card.multilingual::before { background: linear-gradient(90deg, #2563eb, #06b6d4); }
+
+        .model-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .model-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            color: white;
+        }
+
+        .model-card.xgboost .model-icon { background: linear-gradient(135deg, #059669, #10b981); }
+        .model-card.roberta .model-icon { background: linear-gradient(135deg, #dc2626, #f97316); }
+        .model-card.multilingual .model-icon { background: linear-gradient(135deg, #2563eb, #06b6d4); }
+
+        .model-name {
+            font-size: 1.3rem;
+            font-weight: 600;
+        }
+
+        .model-stats {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+        }
+
+        .model-stat {
+            background: rgba(15, 23, 42, 0.5);
+            padding: 12px;
+            border-radius: 8px;
+        }
+
+        .model-stat-value {
+            font-size: 1.5rem;
+            font-weight: 700;
+            color: #60a5fa;
+        }
+
+        .model-stat-label {
+            font-size: 0.8rem;
+            color: #94a3b8;
+        }
+
+        .status-indicator {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            margin-left: auto;
+        }
+
+        .status-indicator.online {
+            background: rgba(16, 185, 129, 0.2);
+            color: #10b981;
+        }
+
+        .status-indicator.offline {
+            background: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+        }
+
+        .status-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            animation: pulse 2s infinite;
+        }
+
+        .status-indicator.online .status-dot { background: #10b981; }
+        .status-indicator.offline .status-dot { background: #ef4444; }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .test-section {
+            background: rgba(30, 41, 59, 0.8);
+            border-radius: 16px;
+            padding: 24px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            margin-bottom: 30px;
+        }
+
+        .test-section h3 {
+            margin-bottom: 20px;
+            color: #e2e8f0;
+        }
+
+        .test-input-group {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .test-input {
+            flex: 1;
+            padding: 15px 20px;
+            background: #0f172a;
+            border: 2px solid #334155;
+            border-radius: 12px;
+            color: white;
+            font-size: 1rem;
+            outline: none;
+            transition: border-color 0.3s;
+        }
+
+        .test-input:focus {
+            border-color: #6366f1;
+        }
+
+        .test-btn {
+            padding: 15px 30px;
+            background: linear-gradient(135deg, #dc2626 0%, #b91c1c 100%);
+            border: none;
+            border-radius: 12px;
+            color: white;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+
+        .test-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(220, 38, 38, 0.3);
+        }
+
+        .test-btn:disabled {
+            background: #334155;
+            cursor: not-allowed;
+            transform: none;
+            box-shadow: none;
+        }
+
+        .results-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 15px;
+        }
+
+        .result-card {
+            background: rgba(15, 23, 42, 0.5);
+            border-radius: 12px;
+            padding: 20px;
+            border: 2px solid transparent;
+            transition: all 0.3s;
+        }
+
+        .result-card.toxic {
+            border-color: rgba(239, 68, 68, 0.5);
+            background: rgba(239, 68, 68, 0.1);
+        }
+
+        .result-card.clean {
+            border-color: rgba(16, 185, 129, 0.5);
+            background: rgba(16, 185, 129, 0.1);
+        }
+
+        .result-card.loading {
+            border-color: rgba(59, 130, 246, 0.5);
+        }
+
+        .result-header {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+
+        .result-model {
+            font-weight: 600;
+            color: #e2e8f0;
+        }
+
+        .result-time {
+            margin-left: auto;
+            font-size: 0.8rem;
+            color: #94a3b8;
+        }
+
+        .result-verdict {
+            font-size: 1.2rem;
+            font-weight: 700;
+            margin-bottom: 10px;
+        }
+
+        .result-card.toxic .result-verdict { color: #ef4444; }
+        .result-card.clean .result-verdict { color: #10b981; }
+
+        .result-prob {
+            color: #94a3b8;
+            font-size: 0.9rem;
+        }
+
+        .progress-bar {
+            height: 6px;
+            background: rgba(255, 255, 255, 0.1);
+            border-radius: 3px;
+            margin-top: 10px;
+            overflow: hidden;
+        }
+
+        .progress-fill {
+            height: 100%;
+            border-radius: 3px;
+            transition: width 0.5s ease;
+        }
+
+        .result-card.toxic .progress-fill { background: #ef4444; }
+        .result-card.clean .progress-fill { background: #10b981; }
+
+        .spinner {
+            width: 24px;
+            height: 24px;
+            border: 3px solid rgba(255, 255, 255, 0.1);
+            border-top-color: #3b82f6;
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        .history-section {
+            background: rgba(30, 41, 59, 0.8);
+            border-radius: 16px;
+            padding: 24px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .history-section h3 {
+            margin-bottom: 20px;
+        }
+
+        .history-table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .history-table th,
+        .history-table td {
+            padding: 12px 15px;
+            text-align: left;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .history-table th {
+            color: #94a3b8;
+            font-weight: 600;
+            text-transform: uppercase;
+            font-size: 0.8rem;
+        }
+
+        .history-table tr:hover {
+            background: rgba(255, 255, 255, 0.05);
+        }
+
+        .badge {
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 600;
+        }
+
+        .badge.toxic {
+            background: rgba(239, 68, 68, 0.2);
+            color: #ef4444;
+        }
+
+        .badge.clean {
+            background: rgba(16, 185, 129, 0.2);
+            color: #10b981;
+        }
+
+        .language-badge {
+            background: rgba(59, 130, 246, 0.2);
+            color: #60a5fa;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            margin-left: 8px;
+        }
+
+        @media (max-width: 768px) {
+            .model-comparison,
+            .results-grid {
+                grid-template-columns: 1fr;
+            }
+
+            .test-input-group {
+                flex-direction: column;
+            }
+
+            .charts-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+</head>
+<body>
+    <nav class="nav-bar">
+        <a href="/" class="nav-link">Analyseur</a>
+        <a href="/dashboard.html" class="nav-link active">Dashboard</a>
+        <a href="/wikipedia.html" class="nav-link">Wikipedia Live</a>
+    </nav>
+
+    <div class="container">
+        <div class="header">
+            <h1>Toxic Comment Classifier Dashboard</h1>
+            <p>Analyse en temps reel avec 3 modeles de Machine Learning</p>
+        </div>
+
+        <!-- Stats globales -->
+        <div class="stats-grid">
+            <div class="stat-card total">
+                <div class="stat-value" id="totalAnalyses">0</div>
+                <div class="stat-label">Analyses totales</div>
+            </div>
+            <div class="stat-card toxic">
+                <div class="stat-value" id="toxicCount">0</div>
+                <div class="stat-label">Commentaires toxiques</div>
+            </div>
+            <div class="stat-card clean">
+                <div class="stat-value" id="cleanCount">0</div>
+                <div class="stat-label">Commentaires propres</div>
+            </div>
+            <div class="stat-card avg">
+                <div class="stat-value" id="avgTime">0ms</div>
+                <div class="stat-label">Temps moyen</div>
+            </div>
+        </div>
+
+        <!-- Comparaison des modeles -->
+        <div class="model-comparison">
+            <div class="model-card xgboost">
+                <div class="model-header">
+                    <div class="model-icon">XG</div>
+                    <span class="model-name">XGBoost</span>
+                    <div class="status-indicator online" id="status-xgboost">
+                        <span class="status-dot"></span>
+                        <span>En ligne</span>
+                    </div>
+                </div>
+                <div class="model-stats">
+                    <div class="model-stat">
+                        <div class="model-stat-value" id="xgboost-count">0</div>
+                        <div class="model-stat-label">Analyses</div>
+                    </div>
+                    <div class="model-stat">
+                        <div class="model-stat-value" id="xgboost-time">-</div>
+                        <div class="model-stat-label">Temps moyen</div>
+                    </div>
+                    <div class="model-stat">
+                        <div class="model-stat-value" id="xgboost-toxic">0%</div>
+                        <div class="model-stat-label">Taux toxique</div>
+                    </div>
+                    <div class="model-stat">
+                        <div class="model-stat-value">F1: 0.76</div>
+                        <div class="model-stat-label">Performance</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="model-card roberta">
+                <div class="model-header">
+                    <div class="model-icon">RB</div>
+                    <span class="model-name">RoBERTa</span>
+                    <div class="status-indicator online" id="status-roberta">
+                        <span class="status-dot"></span>
+                        <span>En ligne</span>
+                    </div>
+                </div>
+                <div class="model-stats">
+                    <div class="model-stat">
+                        <div class="model-stat-value" id="roberta-count">0</div>
+                        <div class="model-stat-label">Analyses</div>
+                    </div>
+                    <div class="model-stat">
+                        <div class="model-stat-value" id="roberta-time">-</div>
+                        <div class="model-stat-label">Temps moyen</div>
+                    </div>
+                    <div class="model-stat">
+                        <div class="model-stat-value" id="roberta-toxic">0%</div>
+                        <div class="model-stat-label">Taux toxique</div>
+                    </div>
+                    <div class="model-stat">
+                        <div class="model-stat-value">F1: 0.80</div>
+                        <div class="model-stat-label">Performance</div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="model-card multilingual">
+                <div class="model-header">
+                    <div class="model-icon">ML</div>
+                    <span class="model-name">Multilingue</span>
+                    <div class="status-indicator online" id="status-multilingual">
+                        <span class="status-dot"></span>
+                        <span>En ligne</span>
+                    </div>
+                </div>
+                <div class="model-stats">
+                    <div class="model-stat">
+                        <div class="model-stat-value" id="multilingual-count">0</div>
+                        <div class="model-stat-label">Analyses</div>
+                    </div>
+                    <div class="model-stat">
+                        <div class="model-stat-value" id="multilingual-time">-</div>
+                        <div class="model-stat-label">Temps moyen</div>
+                    </div>
+                    <div class="model-stat">
+                        <div class="model-stat-value" id="multilingual-toxic">0%</div>
+                        <div class="model-stat-label">Taux toxique</div>
+                    </div>
+                    <div class="model-stat">
+                        <div class="model-stat-value">100+</div>
+                        <div class="model-stat-label">Langues</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section de test -->
+        <div class="test-section">
+            <h3>Test Comparatif en Temps Reel</h3>
+            <div class="test-input-group">
+                <input type="text" class="test-input" id="testInput" placeholder="Entrez un commentaire a analyser (FR, EN, AR...)">
+                <button class="test-btn" id="testBtn" onclick="analyzeAll()">Analyser</button>
+            </div>
+            <div class="results-grid" id="resultsGrid">
+                <div class="result-card" id="result-xgboost">
+                    <div class="result-header">
+                        <span class="result-model">XGBoost</span>
+                        <span class="result-time" id="time-xgboost">-</span>
+                    </div>
+                    <div class="result-verdict" id="verdict-xgboost">En attente...</div>
+                    <div class="result-prob" id="prob-xgboost">-</div>
+                    <div class="progress-bar"><div class="progress-fill" id="bar-xgboost" style="width: 0%"></div></div>
+                </div>
+                <div class="result-card" id="result-roberta">
+                    <div class="result-header">
+                        <span class="result-model">RoBERTa</span>
+                        <span class="result-time" id="time-roberta">-</span>
+                    </div>
+                    <div class="result-verdict" id="verdict-roberta">En attente...</div>
+                    <div class="result-prob" id="prob-roberta">-</div>
+                    <div class="progress-bar"><div class="progress-fill" id="bar-roberta" style="width: 0%"></div></div>
+                </div>
+                <div class="result-card" id="result-multilingual">
+                    <div class="result-header">
+                        <span class="result-model">Multilingue</span>
+                        <span class="result-time" id="time-multilingual">-</span>
+                    </div>
+                    <div class="result-verdict" id="verdict-multilingual">En attente...</div>
+                    <div class="result-prob" id="prob-multilingual">-</div>
+                    <div class="progress-bar"><div class="progress-fill" id="bar-multilingual" style="width: 0%"></div></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Graphiques -->
+        <div class="charts-grid">
+            <div class="chart-card">
+                <h3>Repartition Toxique/Propre</h3>
+                <canvas id="pieChart"></canvas>
+            </div>
+            <div class="chart-card">
+                <h3>Comparaison des Modeles</h3>
+                <canvas id="barChart"></canvas>
+            </div>
+        </div>
+
+        <!-- Historique -->
+        <div class="history-section">
+            <h3>Historique des Analyses</h3>
+            <table class="history-table">
+                <thead>
+                    <tr>
+                        <th>Texte</th>
+                        <th>XGBoost</th>
+                        <th>RoBERTa</th>
+                        <th>Multilingue</th>
+                        <th>Langue</th>
+                        <th>Heure</th>
+                    </tr>
+                </thead>
+                <tbody id="historyBody">
+                    <tr>
+                        <td colspan="6" style="text-align: center; color: #64748b;">Aucune analyse pour le moment</td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <script>
+        const API_BASE = 'https://0hik6heuhc.execute-api.us-east-1.amazonaws.com/prod';
+
+        // Stats
+        let stats = {
+            total: 0,
+            toxic: 0,
+            clean: 0,
+            times: [],
+            models: {
+                xgboost: { count: 0, toxic: 0, times: [] },
+                roberta: { count: 0, toxic: 0, times: [] },
+                multilingual: { count: 0, toxic: 0, times: [] }
+            }
+        };
+
+        let history = [];
+
+        // Charts
+        let pieChart, barChart;
+
+        function initCharts() {
+            const pieCtx = document.getElementById('pieChart').getContext('2d');
+            pieChart = new Chart(pieCtx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Toxiques', 'Propres'],
+                    datasets: [{
+                        data: [0, 0],
+                        backgroundColor: ['#ef4444', '#10b981'],
+                        borderWidth: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: { color: '#94a3b8' }
+                        }
+                    }
+                }
+            });
+
+            const barCtx = document.getElementById('barChart').getContext('2d');
+            barChart = new Chart(barCtx, {
+                type: 'bar',
+                data: {
+                    labels: ['XGBoost', 'RoBERTa', 'Multilingue'],
+                    datasets: [
+                        {
+                            label: 'Toxiques',
+                            data: [0, 0, 0],
+                            backgroundColor: '#ef4444'
+                        },
+                        {
+                            label: 'Propres',
+                            data: [0, 0, 0],
+                            backgroundColor: '#10b981'
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true,
+                    scales: {
+                        x: {
+                            stacked: true,
+                            ticks: { color: '#94a3b8' },
+                            grid: { color: 'rgba(255,255,255,0.1)' }
+                        },
+                        y: {
+                            stacked: true,
+                            ticks: { color: '#94a3b8' },
+                            grid: { color: 'rgba(255,255,255,0.1)' }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            labels: { color: '#94a3b8' }
+                        }
+                    }
+                }
+            });
+        }
+
+        function updateStats() {
+            document.getElementById('totalAnalyses').textContent = stats.total;
+            document.getElementById('toxicCount').textContent = stats.toxic;
+            document.getElementById('cleanCount').textContent = stats.clean;
+
+            const avgTime = stats.times.length > 0
+                ? Math.round(stats.times.reduce((a, b) => a + b, 0) / stats.times.length)
+                : 0;
+            document.getElementById('avgTime').textContent = avgTime + 'ms';
+
+            // Update model stats
+            ['xgboost', 'roberta', 'multilingual'].forEach(model => {
+                const m = stats.models[model];
+                document.getElementById(`${model}-count`).textContent = m.count;
+                document.getElementById(`${model}-toxic`).textContent =
+                    m.count > 0 ? Math.round(m.toxic / m.count * 100) + '%' : '0%';
+                document.getElementById(`${model}-time`).textContent =
+                    m.times.length > 0
+                        ? Math.round(m.times.reduce((a, b) => a + b, 0) / m.times.length) + 'ms'
+                        : '-';
+            });
+
+            // Update charts
+            pieChart.data.datasets[0].data = [stats.toxic, stats.clean];
+            pieChart.update();
+
+            barChart.data.datasets[0].data = [
+                stats.models.xgboost.toxic,
+                stats.models.roberta.toxic,
+                stats.models.multilingual.toxic
+            ];
+            barChart.data.datasets[1].data = [
+                stats.models.xgboost.count - stats.models.xgboost.toxic,
+                stats.models.roberta.count - stats.models.roberta.toxic,
+                stats.models.multilingual.count - stats.models.multilingual.toxic
+            ];
+            barChart.update();
+        }
+
+        async function analyzeWithModel(text, model, endpoint) {
+            const card = document.getElementById(`result-${model}`);
+            const verdict = document.getElementById(`verdict-${model}`);
+            const prob = document.getElementById(`prob-${model}`);
+            const time = document.getElementById(`time-${model}`);
+            const bar = document.getElementById(`bar-${model}`);
+
+            card.className = 'result-card loading';
+            verdict.textContent = 'Analyse...';
+            prob.textContent = '';
+
+            const start = Date.now();
+
+            try {
+                const response = await axios.post(`${API_BASE}${endpoint}`, { text }, {
+                    headers: { 'Content-Type': 'application/json' },
+                    timeout: 120000
+                });
+
+                const elapsed = Date.now() - start;
+                const data = response.data;
+
+                // Get probability - handle different response formats
+                let toxicProb;
+                if (data.toxic_probability !== undefined) {
+                    toxicProb = data.toxic_probability;
+                } else if (data.summary && data.summary.severity_score !== undefined) {
+                    toxicProb = data.summary.severity_score;
+                } else if (data.labels && data.labels.toxic) {
+                    toxicProb = data.labels.toxic.probability;
+                } else {
+                    toxicProb = data.is_toxic ? 0.9 : 0.1;
+                }
+
+                const isToxic = data.is_toxic;
+                const lang = data.language_detected || 'en';
+
+                card.className = `result-card ${isToxic ? 'toxic' : 'clean'}`;
+                verdict.textContent = isToxic ? 'TOXIQUE' : 'PROPRE';
+                prob.innerHTML = `Probabilite: ${(toxicProb * 100).toFixed(1)}%` +
+                    (model === 'multilingual' ? `<span class="language-badge">${lang.toUpperCase()}</span>` : '');
+                time.textContent = elapsed + 'ms';
+                bar.style.width = (toxicProb * 100) + '%';
+
+                // Update stats
+                stats.models[model].count++;
+                if (isToxic) stats.models[model].toxic++;
+                stats.models[model].times.push(elapsed);
+
+                return { model, isToxic, toxicProb, elapsed, lang };
+
+            } catch (error) {
+                const elapsed = Date.now() - start;
+                card.className = 'result-card';
+                verdict.textContent = 'Erreur';
+                prob.textContent = error.message;
+                time.textContent = elapsed + 'ms';
+
+                return { model, error: true, elapsed };
+            }
+        }
+
+        async function analyzeAll() {
+            const text = document.getElementById('testInput').value.trim();
+            if (!text) return;
+
+            const btn = document.getElementById('testBtn');
+            btn.disabled = true;
+            btn.textContent = 'Analyse...';
+
+            // Analyze with all models in parallel
+            const results = await Promise.all([
+                analyzeWithModel(text, 'xgboost', '/xgboost/predict'),
+                analyzeWithModel(text, 'roberta', '/roberta/predict'),
+                analyzeWithModel(text, 'multilingual', '/multilingual/predict')
+            ]);
+
+            // Update global stats
+            stats.total++;
+            const toxicVotes = results.filter(r => !r.error && r.isToxic).length;
+            if (toxicVotes >= 2) {
+                stats.toxic++;
+            } else {
+                stats.clean++;
+            }
+
+            results.forEach(r => {
+                if (!r.error) stats.times.push(r.elapsed);
+            });
+
+            // Add to history
+            addToHistory(text, results);
+
+            updateStats();
+
+            btn.disabled = false;
+            btn.textContent = 'Analyser';
+        }
+
+        function addToHistory(text, results) {
+            const tbody = document.getElementById('historyBody');
+
+            // Remove placeholder if exists
+            if (history.length === 0) {
+                tbody.innerHTML = '';
+            }
+
+            const xg = results.find(r => r.model === 'xgboost');
+            const rb = results.find(r => r.model === 'roberta');
+            const ml = results.find(r => r.model === 'multilingual');
+
+            const row = document.createElement('tr');
+            row.innerHTML = `
+                <td>${text.length > 50 ? text.substring(0, 50) + '...' : text}</td>
+                <td><span class="badge ${xg && !xg.error && xg.isToxic ? 'toxic' : 'clean'}">${xg && !xg.error ? (xg.isToxic ? 'Toxique' : 'Propre') : 'Erreur'}</span></td>
+                <td><span class="badge ${rb && !rb.error && rb.isToxic ? 'toxic' : 'clean'}">${rb && !rb.error ? (rb.isToxic ? 'Toxique' : 'Propre') : 'Erreur'}</span></td>
+                <td><span class="badge ${ml && !ml.error && ml.isToxic ? 'toxic' : 'clean'}">${ml && !ml.error ? (ml.isToxic ? 'Toxique' : 'Propre') : 'Erreur'}</span></td>
+                <td><span class="language-badge">${ml && ml.lang ? ml.lang.toUpperCase() : 'EN'}</span></td>
+                <td>${new Date().toLocaleTimeString()}</td>
+            `;
+
+            tbody.insertBefore(row, tbody.firstChild);
+            history.unshift({ text, results, time: new Date() });
+
+            // Keep only last 20
+            if (history.length > 20) {
+                history.pop();
+                tbody.removeChild(tbody.lastChild);
+            }
+        }
+
+        // Check API status
+        async function checkStatus(model, endpoint) {
+            const indicator = document.getElementById(`status-${model}`);
+            try {
+                await axios.get(`${API_BASE}${endpoint}`, { timeout: 10000 });
+                indicator.className = 'status-indicator online';
+                indicator.innerHTML = '<span class="status-dot"></span><span>En ligne</span>';
+            } catch {
+                indicator.className = 'status-indicator offline';
+                indicator.innerHTML = '<span class="status-dot"></span><span>Hors ligne</span>';
+            }
+        }
+
+        // Enter key to analyze
+        document.getElementById('testInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') analyzeAll();
+        });
+
+        // Initialize
+        initCharts();
+
+        // Check status periodically
+        checkStatus('xgboost', '/xgboost/health');
+        checkStatus('roberta', '/roberta/health');
+        checkStatus('multilingual', '/multilingual/health');
+
+        setInterval(() => {
+            checkStatus('xgboost', '/xgboost/health');
+            checkStatus('roberta', '/roberta/health');
+            checkStatus('multilingual', '/multilingual/health');
+        }, 60000);
+    </script>
+</body>
+</html>
