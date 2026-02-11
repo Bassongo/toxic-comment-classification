@@ -222,7 +222,7 @@ curl -X POST https://0hik6heuhc.execute-api.us-east-1.amazonaws.com/prod/multili
 
 ## 👥 Equipe
 
-- Marc (et equipe)
+- Groupe3-Projet NLP
 
 ## 📄 Licence
 
