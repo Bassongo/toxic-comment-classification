@@ -1,229 +1,199 @@
 # 🛡️ Toxic Comment Classification
 
-Classification multi-label de commentaires toxiques utilisant 3 modeles de Machine Learning deployes sur AWS.
+> Multi-label toxicity detection system with 3 ML models deployed on AWS — from classical ML to multilingual Transformers.
 
-[![Live Demo](https://img.shields.io/badge/Demo-Live-green)](http://toxic-classifier-frontend-836192637207.s3-website-us-east-1.amazonaws.com)
+[![Live Demo](https://img.shields.io/badge/Demo-Live-brightgreen)](http://toxic-classifier-frontend-836192637207.s3-website-us-east-1.amazonaws.com)
 [![AWS Lambda](https://img.shields.io/badge/AWS-Lambda-orange)](https://aws.amazon.com/lambda/)
 [![Python](https://img.shields.io/badge/Python-3.11-blue)](https://www.python.org/)
+[![HuggingFace](https://img.shields.io/badge/🤗-Transformers-yellow)](https://huggingface.co/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 
-## 🎯 Demo en Ligne
+---
 
-**Application**: [http://toxic-classifier-frontend-836192637207.s3-website-us-east-1.amazonaws.com](http://toxic-classifier-frontend-836192637207.s3-website-us-east-1.amazonaws.com)
+## Overview
+
+This project builds a production-ready **multi-label toxic comment classifier** that detects 6 categories of harmful content in text. Three models — ranging from a fast classical ML baseline to a 560M-parameter multilingual Transformer — are each deployed as independent AWS Lambda microservices behind a unified API Gateway.
+
+The system includes a **real-time Wikipedia edit analyzer**, monitoring toxicity across 6 language editions (EN, FR, DE, ES, IT, AR) — directly relevant to content moderation at scale, a core challenge in AI Safety.
+
+**🔗 Live Application** : [toxic-classifier-frontend](http://toxic-classifier-frontend-836192637207.s3-website-us-east-1.amazonaws.com)
 
 | Page | Description |
 |------|-------------|
-| [Analyseur](http://toxic-classifier-frontend-836192637207.s3-website-us-east-1.amazonaws.com) | Analyse de commentaires avec choix du modele |
-| [Dashboard](http://toxic-classifier-frontend-836192637207.s3-website-us-east-1.amazonaws.com/dashboard.html) | Comparaison des 3 modeles en temps reel |
-| [Wikipedia Live](http://toxic-classifier-frontend-836192637207.s3-website-us-east-1.amazonaws.com/wikipedia.html) | Analyse des modifications Wikipedia |
+| [Analyzer](http://toxic-classifier-frontend-836192637207.s3-website-us-east-1.amazonaws.com) | Real-time comment analysis with model selection |
+| [Dashboard](http://toxic-classifier-frontend-836192637207.s3-website-us-east-1.amazonaws.com/dashboard.html) | Side-by-side comparison of all 3 models |
+| [Wikipedia Live](http://toxic-classifier-frontend-836192637207.s3-website-us-east-1.amazonaws.com/wikipedia.html) | Live toxicity monitoring of Wikipedia edits |
 
-## 📊 Dataset
+---
 
-- **Source**: [Kaggle Jigsaw Toxic Comment Classification](https://www.kaggle.com/c/jigsaw-toxic-comment-classification-challenge)
-- **Taille**: 159,571 commentaires Wikipedia annotes
-- **Labels**: 6 categories de toxicite
-  - `toxic` - Toxicite generale
-  - `severe_toxic` - Toxicite extreme
-  - `obscene` - Langage obscene
-  - `threat` - Menaces
-  - `insult` - Insultes
-  - `identity_hate` - Discours haineux
+## Key Results
 
-## 🤖 Les 3 Modeles
+| Model | F1-Score | Latency | Languages | Size |
+|-------|----------|---------|-----------|------|
+| XGBoost + TF-IDF | 0.76 | ~50ms | English | — |
+| RoBERTa | **0.80** | ~300ms | English | 125M params |
+| XLM-RoBERTa | ~0.78 | ~400ms | **100+** | 560M params |
 
-### 1. XGBoost (Machine Learning Classique)
-| Caracteristique | Valeur |
-|----------------|--------|
-| F1-Score | 0.76 |
-| Latence | ~50ms |
-| Langues | Anglais |
-| Vectorisation | TF-IDF |
+> **Best accuracy** : RoBERTa (F1 = 0.80) · **Best multilingual coverage** : XLM-RoBERTa (100+ languages)
 
-**Ideal pour**: Production haute frequence, filtrage rapide
+---
 
-### 2. RoBERTa (Deep Learning)
-| Caracteristique | Valeur |
-|----------------|--------|
-| F1-Score | 0.80 |
-| Latence | ~300ms |
-| Langues | Anglais |
-| Architecture | Transformer (125M params) |
+## AI Safety Relevance
 
-**Ideal pour**: Analyse approfondie, comprehension contextuelle
+Toxic content detection is a foundational problem in **AI Safety and content moderation** :
 
-### 3. XLM-RoBERTa Multilingue
-| Caracteristique | Valeur |
-|----------------|--------|
-| Langues | 100+ |
-| Latence | ~400ms |
-| Architecture | Transformer (560M params) |
-| Detection langue | Automatique |
+- **Scalable oversight** : automated flagging of harmful content reduces human reviewer burden
+- **Multilingual coverage** : XLM-RoBERTa enables safety monitoring beyond English-centric systems
+- **Model comparison** : the dashboard exposes tradeoffs between speed, accuracy, and coverage — critical for deployment decisions
+- **Real-world grounding** : Wikipedia live monitoring tests the system on genuine adversarial content
 
-**Langues supportees**: Francais, Anglais, Arabe, Espagnol, Allemand, Chinois, Japonais, Russe, Portugais, Italien...
+---
 
-**Ideal pour**: Contenu international, Wikipedia multilingue
+## Dataset
 
-## 🏗️ Architecture
+- **Source** : [Kaggle Jigsaw Toxic Comment Classification Challenge](https://www.kaggle.com/c/jigsaw-toxic-comment-classification-challenge)
+- **Size** : 159,571 annotated Wikipedia comments
+- **Task** : Multi-label classification (a comment can belong to multiple categories)
+
+| Label | Description |
+|-------|-------------|
+| `toxic` | General toxicity |
+| `severe_toxic` | Extreme toxicity |
+| `obscene` | Obscene language |
+| `threat` | Threats of violence |
+| `insult` | Personal insults |
+| `identity_hate` | Hate speech targeting identity |
+
+---
+
+## Architecture
 
 ```
-                     ┌─────────────────────────────────────┐
-                     │        AWS S3 (Frontend)           │
-                     │   React App + Dashboard HTML       │
-                     └───────────────┬─────────────────────┘
-                                     │
-                                     ▼
-                     ┌─────────────────────────────────────┐
-                     │         AWS API Gateway            │
-                     │   /xgboost  /roberta  /multilingual│
-                     └───────────────┬─────────────────────┘
-                                     │
-              ┌──────────────────────┼──────────────────────┐
-              │                      │                      │
-              ▼                      ▼                      ▼
-    ┌─────────────────┐   ┌─────────────────┐   ┌─────────────────┐
-    │  Lambda XGBoost │   │ Lambda RoBERTa  │   │ Lambda Multiling│
-    │    (Docker)     │   │    (Docker)     │   │    (Docker)     │
-    │    512 MB       │   │    2048 MB      │   │    3008 MB      │
-    └─────────────────┘   └─────────────────┘   └─────────────────┘
+┌─────────────────────────────────────┐
+│         AWS S3 (Frontend)           │
+│   React App · Dashboard · Wikipedia │
+└───────────────┬─────────────────────┘
+                │
+                ▼
+┌─────────────────────────────────────┐
+│         AWS API Gateway             │
+│  /xgboost  /roberta  /multilingual  │
+└──────────┬──────────┬───────────────┘
+           │          │          │
+           ▼          ▼          ▼
+  ┌──────────────┐ ┌──────────────┐ ┌──────────────┐
+  │Lambda XGBoost│ │Lambda RoBERTa│ │Lambda XLM-R  │
+  │  (Docker)    │ │  (Docker)    │ │  (Docker)    │
+  │   512 MB     │ │   2048 MB    │ │   3008 MB    │
+  └──────────────┘ └──────────────┘ └──────────────┘
 ```
 
-## 📁 Structure du Projet
+Each model runs in an isolated Docker container on AWS Lambda, enabling independent scaling and versioning.
 
-```
-toxic-comment-classification/
-├── deployment/
-│   ├── lambda-xgboost/          # Modele XGBoost
-│   │   ├── app.py               # API FastAPI
-│   │   ├── Dockerfile
-│   │   └── requirements.txt
-│   ├── lambda-roberta/          # Modele RoBERTa
-│   │   ├── app.py
-│   │   ├── Dockerfile
-│   │   └── requirements.txt
-│   ├── lambda-multilingual/     # Modele Multilingue
-│   │   ├── app.py
-│   │   ├── Dockerfile
-│   │   └── requirements.txt
-│   ├── frontend/                # Application React
-│   │   ├── src/App.js
-│   │   └── package.json
-│   └── dashboard/               # Pages statiques
-│       ├── index.html           # Dashboard comparatif
-│       └── wikipedia.html       # Analyseur Wikipedia
-├── documentation/
-│   ├── XGBOOST_MODEL.md
-│   ├── ROBERTA_MODEL.md
-│   ├── MULTILINGUAL_MODEL.md
-│   ├── DASHBOARD_DOCS.md
-│   └── POWERPOINT_TEXTES.md
-└── README.md
-```
+---
 
-## 🚀 Deploiement
+## API Reference
 
-### Prerequisites
-- AWS CLI configure
-- Docker Desktop
-- Node.js 18+
+**Base URL** : `https://0hik6heuhc.execute-api.us-east-1.amazonaws.com/prod`
 
-### 1. Build et Push des images Docker
-```bash
-# XGBoost
-cd deployment/lambda-xgboost
-docker build -t toxic-xgboost .
-aws ecr get-login-password | docker login --username AWS --password-stdin <account>.dkr.ecr.us-east-1.amazonaws.com
-docker tag toxic-xgboost:latest <account>.dkr.ecr.us-east-1.amazonaws.com/toxic-xgboost:latest
-docker push <account>.dkr.ecr.us-east-1.amazonaws.com/toxic-xgboost:latest
-
-# Repeter pour roberta et multilingual
-```
-
-### 2. Deployer le Frontend
-```bash
-cd deployment/frontend
-npm install
-npm run build
-aws s3 sync build/ s3://toxic-classifier-frontend-<account> --delete
-aws s3 cp ../dashboard/index.html s3://toxic-classifier-frontend-<account>/dashboard.html
-aws s3 cp ../dashboard/wikipedia.html s3://toxic-classifier-frontend-<account>/wikipedia.html
-```
-
-## 📡 API Endpoints
-
-Base URL: `https://0hik6heuhc.execute-api.us-east-1.amazonaws.com/prod`
-
-| Endpoint | Methode | Description |
-|----------|---------|-------------|
-| `/xgboost/predict` | POST | Analyse avec XGBoost |
-| `/roberta/predict` | POST | Analyse avec RoBERTa |
-| `/multilingual/predict` | POST | Analyse multilingue |
+| Endpoint | Method | Model |
+|----------|--------|-------|
+| `/xgboost/predict` | POST | XGBoost + TF-IDF |
+| `/roberta/predict` | POST | RoBERTa |
+| `/multilingual/predict` | POST | XLM-RoBERTa |
 | `/*/health` | GET | Health check |
 
-### Exemple de requete
+**Request**
 ```bash
 curl -X POST https://0hik6heuhc.execute-api.us-east-1.amazonaws.com/prod/multilingual/predict \
   -H "Content-Type: application/json" \
-  -d '{"text": "Tu es vraiment nul!"}'
+  -d '{"text": "You are absolutely worthless."}'
 ```
 
-### Exemple de reponse
+**Response**
 ```json
 {
   "is_toxic": true,
   "toxic_probability": 0.89,
-  "language_detected": "fr",
+  "language_detected": "en",
   "confidence": "high",
   "model": "XLM-RoBERTa Multilingual"
 }
 ```
 
-## 🌐 Fonctionnalites
+---
 
-### Application Principale
-- Analyse de texte libre
-- Selection du modele (XGBoost, RoBERTa, Multilingue)
-- Affichage detaille des resultats
-- Detection automatique de langue
+## Project Structure
 
-### Dashboard Comparatif
-- Comparaison simultanee des 3 modeles
-- Statistiques en temps reel
-- Graphiques interactifs (Chart.js)
-- Historique des analyses
+```
+toxic-comment-classification/
+├── deployment/
+│   ├── lambda-xgboost/          # XGBoost microservice
+│   │   ├── app.py               # FastAPI + Mangum handler
+│   │   ├── Dockerfile
+│   │   └── requirements.txt
+│   ├── lambda-roberta/          # RoBERTa microservice
+│   ├── lambda-multilingual/     # XLM-RoBERTa microservice
+│   ├── frontend/                # React application
+│   └── dashboard/               # Static comparison dashboard
+├── documentation/
+│   ├── XGBOOST_MODEL.md
+│   ├── ROBERTA_MODEL.md
+│   └── MULTILINGUAL_MODEL.md
+└── README.md
+```
 
-### Wikipedia Live Analyzer
-- Analyse des modifications Wikipedia en temps reel
-- Support multi-editions (FR, EN, DE, ES, IT, AR)
-- Filtrage toxique/propre
-- Visualisation des tendances
+---
 
-## 📈 Performance
+## Quick Start
 
-| Modele | F1-Score | Latence | Cold Start | RAM |
-|--------|----------|---------|------------|-----|
-| XGBoost | 0.76 | 50ms | 1s | 512MB |
-| RoBERTa | 0.80 | 300ms | 5s | 2GB |
-| Multilingue | ~0.78 | 400ms | 30s | 3GB |
+```bash
+git clone https://github.com/Bassongo/toxic-comment-classification.git
+cd toxic-comment-classification
 
-## 📚 Documentation
+# Deploy XGBoost Lambda
+cd deployment/lambda-xgboost
+docker build -t toxic-xgboost .
+aws ecr get-login-password | docker login --username AWS --password-stdin <account>.dkr.ecr.us-east-1.amazonaws.com
+docker tag toxic-xgboost:latest <account>.dkr.ecr.us-east-1.amazonaws.com/toxic-xgboost:latest
+docker push <account>.dkr.ecr.us-east-1.amazonaws.com/toxic-xgboost:latest
+```
 
-- [Documentation XGBoost](documentation/XGBOOST_MODEL.md)
-- [Documentation RoBERTa](documentation/ROBERTA_MODEL.md)
-- [Documentation Multilingue](documentation/MULTILINGUAL_MODEL.md)
-- [Documentation Dashboards](documentation/DASHBOARD_DOCS.md)
-- [Textes PowerPoint](documentation/POWERPOINT_TEXTES.md)
+**Prerequisites** : AWS CLI · Docker Desktop · Node.js 18+
 
-## 🛠️ Technologies
+---
 
-- **Backend**: Python 3.11, FastAPI, Mangum
-- **ML/DL**: XGBoost, PyTorch, Transformers (HuggingFace)
-- **Frontend**: React, Chart.js, Axios
-- **Cloud**: AWS Lambda, API Gateway, S3, ECR
-- **Conteneurisation**: Docker
+## Tech Stack
 
-## 👥 Equipe
+| Layer | Technologies |
+|-------|-------------|
+| ML / NLP | XGBoost · PyTorch · HuggingFace Transformers |
+| Backend | Python 3.11 · FastAPI · Mangum |
+| Cloud | AWS Lambda · API Gateway · S3 · ECR |
+| Frontend | React · Chart.js · Axios |
+| DevOps | Docker |
 
-- Groupe3-Projet NLP
+---
 
-## 📄 Licence
+## Limitations & Future Work
 
-MIT License
+- **F1 ceiling** : XGBoost (0.76) struggles on minority labels (`severe_toxic`, `threat`) — upsampling or cost-sensitive learning could help
+- **African languages** : XLM-RoBERTa covers Swahili but not Wolof, Bambara, or Mooré — a natural extension given the African NLP gap
+- **RLHF integration** : the classifier could serve as a reward signal in a Constitutional AI-style training loop
+- **Evaluation depth** : adding AUC-ROC per label and calibration curves would better expose model reliability
+
+---
+
+## Author
+
+**Marc MARE** — Statistics & ML Engineer  
+ENSAE Dakar | MSc SEP, University of Reims (2026)  
+
+[![LinkedIn](https://img.shields.io/badge/LinkedIn-Marc_MARE-0077B5?style=flat&logo=linkedin)](https://www.linkedin.com/in/marc-mare-4875a6277)
+[![GitHub](https://img.shields.io/badge/GitHub-Bassongo-181717?style=flat&logo=github)](https://github.com/Bassongo)
+
+---
+
+## License
+
+MIT License — see [LICENSE](LICENSE) for details.
