@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Node
+node_modules/
+npm-debug.log*
+
+# Models & data
+*.pt
+*.pth
+*.bin
+*.safetensors
+*.pkl
+*.joblib
+*.dta
+*.csv
+*.parquet
+
+# AWS / build
+.aws-sam/
+dist/
+build/
+
+# OS / IDE
+.DS_Store
+Thumbs.db
+.idea/
+.vscode/
