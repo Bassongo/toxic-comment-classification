@@ -1,39 +1,39 @@
-# Modele XGBoost - Documentation Technique
+# XGBoost Model: Technical Documentation
 
-## Vue d'ensemble
+## Overview
 
-Le modele XGBoost (eXtreme Gradient Boosting) est notre solution de Machine Learning classique pour la detection de toxicite. C'est le modele le plus rapide et le plus leger de notre pipeline.
+The XGBoost (eXtreme Gradient Boosting) model is our classical machine learning solution for toxicity detection. It is the fastest and lightest model in the pipeline.
 
-## Caracteristiques Techniques
+## Technical Specifications
 
 ### Architecture
-| Parametre | Valeur |
-|-----------|--------|
-| Type | Ensemble Learning (Gradient Boosting) |
-| Algorithme | XGBoost Classifier |
-| Vectorisation | TF-IDF (Term Frequency-Inverse Document Frequency) |
-| Nombre d'estimateurs | 100 |
-| Profondeur max | 6 |
+| Parameter | Value |
+|-----------|-------|
+| Type | Ensemble learning (gradient boosting) |
+| Algorithm | XGBoost Classifier |
+| Vectorization | TF-IDF (Term Frequency-Inverse Document Frequency) |
+| Number of estimators | 100 |
+| Max depth | 6 |
 | Learning rate | 0.1 |
 
-### Donnees d'entrainement
+### Training data
 - **Dataset**: Jigsaw Toxic Comment Classification Challenge
-- **Taille**: ~160,000 commentaires Wikipedia
-- **Source**: Kaggle Competition
-- **Langues**: Anglais uniquement
+- **Size**: ~160,000 Wikipedia comments
+- **Source**: Kaggle competition
+- **Languages**: English only
 
-### Labels de classification (6 categories)
-1. **toxic** - Contenu toxique general
-2. **severe_toxic** - Toxicite severe/extreme
-3. **obscene** - Langage obscene
-4. **threat** - Menaces
-5. **insult** - Insultes
-6. **identity_hate** - Discours haineux base sur l'identite
+### Classification labels (6 categories)
+1. **toxic**: general toxic content
+2. **severe_toxic**: severe or extreme toxicity
+3. **obscene**: obscene language
+4. **threat**: threats
+5. **insult**: insults
+6. **identity_hate**: identity-based hate speech
 
-## Pipeline de Traitement
+## Processing Pipeline
 
 ```
-Texte brut
+Raw text
     │
     ▼
 ┌─────────────────────┐
@@ -59,40 +59,40 @@ Texte brut
 └─────────────────────┘
     │
     ▼
-Predictions (6 probabilites)
+Predictions (6 probabilities)
 ```
 
 ## Performance
 
-### Metriques sur le jeu de test
-| Metrique | Score |
-|----------|-------|
-| F1-Score Macro | 0.76 |
+### Test set metrics
+| Metric | Score |
+|--------|-------|
+| Macro F1-Score | 0.76 |
 | Precision | 0.78 |
 | Recall | 0.74 |
 | AUC-ROC | 0.97 |
 
-### Temps de reponse
-- **Cold Start**: ~1 seconde
-- **Inference**: ~50-100ms par requete
-- **Batch (20 textes)**: ~500ms
+### Response time
+- **Cold start**: ~1 second
+- **Inference**: ~50 to 100 ms per request
+- **Batch (20 texts)**: ~500 ms
 
-## Avantages
+## Strengths
 
-1. **Rapidite**: Inference tres rapide (ideal pour la production)
-2. **Legerete**: Modele de quelques Mo seulement
-3. **Interpretabilite**: Importance des features disponible
-4. **Multi-label**: Detecte plusieurs types de toxicite simultanement
-5. **Robustesse**: Peu sensible au surajustement
+1. **Speed**: very fast inference, well suited to production
+2. **Small footprint**: model size of only a few MB
+3. **Interpretability**: feature importance is available
+4. **Multi-label**: detects several types of toxicity at once
+5. **Robustness**: low sensitivity to overfitting
 
 ## Limitations
 
-1. **Anglais uniquement**: Ne supporte pas d'autres langues
-2. **Contexte limite**: Ne comprend pas le contexte semantique profond
-3. **Vocabulaire fixe**: Limite par le TF-IDF pre-entraine
-4. **Sarcasme**: Difficulte avec l'ironie et le sarcasme
+1. **English only**: no support for other languages
+2. **Limited context**: no deep semantic understanding
+3. **Fixed vocabulary**: constrained by the pretrained TF-IDF vectorizer
+4. **Sarcasm**: struggles with irony and sarcasm
 
-## Architecture de Deploiement AWS
+## AWS Deployment Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -104,7 +104,7 @@ Predictions (6 probabilites)
 ┌─────────────────────────────────────────────────────────────────┐
 │                      AWS Lambda                                  │
 │  ┌────────────────────────────────────────────────────────┐     │
-│  │                  Container Docker                       │     │
+│  │                  Docker container                       │     │
 │  │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  │     │
 │  │  │   FastAPI    │  │   XGBoost    │  │   Scikit-    │  │     │
 │  │  │   + Mangum   │  │   (~10MB)    │  │   learn      │  │     │
@@ -118,7 +118,7 @@ Predictions (6 probabilites)
 ## API Endpoints
 
 ### POST /xgboost/predict
-Analyse un texte et retourne les probabilites pour chaque categorie.
+Analyzes a text and returns the probability for each category.
 
 **Request:**
 ```json
@@ -142,19 +142,19 @@ Analyse un texte et retourne les probabilites pour chaque categorie.
   "summary": {
     "severity_score": 0.92,
     "detected_categories": ["toxic", "insult"],
-    "severity_level": "Eleve"
+    "severity_level": "High"
   },
   "model": "XGBoost"
 }
 ```
 
-## Processus d'Entrainement
+## Training Process
 
-### 1. Preparation des donnees
+### 1. Data preparation
 ```python
-# Chargement du dataset Kaggle
+# Load the Kaggle dataset
 train_df = pd.read_csv('train.csv')
-# ~160,000 commentaires Wikipedia annotes
+# ~160,000 annotated Wikipedia comments
 ```
 
 ### 2. Preprocessing
@@ -165,7 +165,7 @@ def preprocess(text):
     return text
 ```
 
-### 3. Vectorisation TF-IDF
+### 3. TF-IDF vectorization
 ```python
 vectorizer = TfidfVectorizer(
     max_features=10000,
@@ -175,7 +175,7 @@ vectorizer = TfidfVectorizer(
 X_train = vectorizer.fit_transform(train_texts)
 ```
 
-### 4. Entrainement multi-label
+### 4. Multi-label training
 ```python
 from xgboost import XGBClassifier
 from sklearn.multioutput import MultiOutputClassifier
@@ -192,24 +192,24 @@ model = MultiOutputClassifier(base_model)
 model.fit(X_train, y_train)
 ```
 
-### 5. Sauvegarde
+### 5. Saving
 ```python
 import joblib
 joblib.dump(model, 'xgboost_model.pkl')
 joblib.dump(vectorizer, 'tfidf_vectorizer.pkl')
 ```
 
-## Cas d'Usage Recommandes
+## Recommended Use Cases
 
-- **Moderation rapide**: Filtrage en temps reel de gros volumes
-- **Pre-filtrage**: Premiere passe avant analyse plus approfondie
-- **Applications anglaises**: Plateformes en anglais uniquement
-- **Ressources limitees**: Serveurs avec peu de RAM/CPU
+- **Fast moderation**: real-time filtering of high volumes
+- **Pre-filtering**: first pass before deeper analysis
+- **English applications**: English-only platforms
+- **Constrained resources**: servers with limited RAM or CPU
 
-## URLs de Production
+## Production URLs
 
-- **API Endpoint**: `https://0hik6heuhc.execute-api.us-east-1.amazonaws.com/prod/xgboost/`
-- **Health Check**: `https://0hik6heuhc.execute-api.us-east-1.amazonaws.com/prod/xgboost/health`
+- **API endpoint**: `https://0hik6heuhc.execute-api.us-east-1.amazonaws.com/prod/xgboost/`
+- **Health check**: `https://0hik6heuhc.execute-api.us-east-1.amazonaws.com/prod/xgboost/health`
 
 ## References
 

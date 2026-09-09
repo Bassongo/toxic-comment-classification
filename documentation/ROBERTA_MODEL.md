@@ -1,39 +1,39 @@
-# Modele RoBERTa - Documentation Technique
+# RoBERTa Model: Technical Documentation
 
-## Vue d'ensemble
+## Overview
 
-RoBERTa (Robustly optimized BERT Approach) est notre modele de Deep Learning base sur l'architecture Transformer. Il offre une meilleure comprehension contextuelle que XGBoost, au prix d'une latence legerement plus elevee.
+RoBERTa (Robustly optimized BERT Approach) is our deep learning model, built on the Transformer architecture. It offers better contextual understanding than XGBoost, at the cost of slightly higher latency.
 
-## Caracteristiques Techniques
+## Technical Specifications
 
 ### Architecture
-| Parametre | Valeur |
-|-----------|--------|
-| Type | Transformer (Deep Learning) |
-| Modele de base | RoBERTa-base |
-| Nombre de parametres | ~125 millions |
-| Couches | 12 couches Transformer |
+| Parameter | Value |
+|-----------|-------|
+| Type | Transformer (deep learning) |
+| Base model | RoBERTa-base |
+| Number of parameters | ~125 million |
+| Layers | 12 Transformer layers |
 | Attention heads | 12 |
 | Hidden size | 768 |
 | Max tokens | 512 |
 
-### Modele Pre-entraine
+### Pretrained model
 - **Source**: `s-nlp/roberta_toxicity_classifier`
-- **Fine-tuning**: Sur donnees de toxicite
-- **Langues**: Anglais principalement
+- **Fine-tuning**: on toxicity data
+- **Languages**: primarily English
 
-### Labels de classification (6 categories)
-1. **toxic** - Contenu toxique general
-2. **severe_toxic** - Toxicite severe
-3. **obscene** - Langage obscene
-4. **threat** - Menaces
-5. **insult** - Insultes
-6. **identity_hate** - Discours haineux
+### Classification labels (6 categories)
+1. **toxic**: general toxic content
+2. **severe_toxic**: severe toxicity
+3. **obscene**: obscene language
+4. **threat**: threats
+5. **insult**: insults
+6. **identity_hate**: identity-based hate speech
 
-## Pipeline de Traitement
+## Processing Pipeline
 
 ```
-Texte brut
+Raw text
     │
     ▼
 ┌─────────────────────────┐
@@ -65,40 +65,40 @@ Texte brut
 └─────────────────────────┘
     │
     ▼
-Predictions (6 probabilites)
+Predictions (6 probabilities)
 ```
 
 ## Performance
 
-### Metriques sur le jeu de test
-| Metrique | Score |
-|----------|-------|
-| F1-Score Macro | 0.80 |
+### Test set metrics
+| Metric | Score |
+|--------|-------|
+| Macro F1-Score | 0.80 |
 | Precision | 0.82 |
 | Recall | 0.78 |
 | AUC-ROC | 0.98 |
 
-### Temps de reponse
-- **Cold Start**: ~5-10 secondes
-- **Inference**: ~200-500ms par requete
-- **Batch (20 textes)**: ~2-3 secondes
+### Response time
+- **Cold start**: ~5 to 10 seconds
+- **Inference**: ~200 to 500 ms per request
+- **Batch (20 texts)**: ~2 to 3 seconds
 
-## Avantages
+## Strengths
 
-1. **Comprehension contextuelle**: Comprend le sens des phrases
-2. **Meilleure precision**: F1 superieur a XGBoost
-3. **Robustesse linguistique**: Gere mieux les variations
-4. **Transfer learning**: Beneficie du pre-entrainement massif
-5. **Nuances**: Detecte mieux les insultes subtiles
+1. **Contextual understanding**: captures sentence meaning
+2. **Higher accuracy**: F1 above XGBoost
+3. **Linguistic robustness**: handles variation better
+4. **Transfer learning**: benefits from large-scale pretraining
+5. **Nuance**: better detection of subtle insults
 
 ## Limitations
 
-1. **Anglais uniquement**: Pas de support multilingue
-2. **Latence**: Plus lent que XGBoost
-3. **Ressources**: Necessite plus de RAM (1-2 GB)
-4. **Cold start**: Temps de chargement initial
+1. **English only**: no multilingual support
+2. **Latency**: slower than XGBoost
+3. **Resources**: requires more RAM (1 to 2 GB)
+4. **Cold start**: initial loading time
 
-## Architecture de Deploiement AWS
+## AWS Deployment Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -110,15 +110,15 @@ Predictions (6 probabilites)
 ┌─────────────────────────────────────────────────────────────────┐
 │                      AWS Lambda                                  │
 │  ┌────────────────────────────────────────────────────────┐     │
-│  │                  Container Docker                       │     │
+│  │                  Docker container                       │     │
 │  │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  │     │
 │  │  │   FastAPI    │  │   PyTorch    │  │ Transformers │  │     │
 │  │  │   + Mangum   │  │   (CPU)      │  │   HuggingFace│  │     │
 │  │  └──────────────┘  └──────────────┘  └──────────────┘  │     │
 │  │                                                         │     │
 │  │  ┌──────────────────────────────────────────────────┐  │     │
-│  │  │        RoBERTa Model (~500MB)                    │  │     │
-│  │  │        Pre-telecharge dans l'image               │  │     │
+│  │  │        RoBERTa model (~500MB)                    │  │     │
+│  │  │        Pre-downloaded into the image             │  │     │
 │  │  └──────────────────────────────────────────────────┘  │     │
 │  └────────────────────────────────────────────────────────┘     │
 │                                                                  │
@@ -129,7 +129,7 @@ Predictions (6 probabilites)
 ## API Endpoints
 
 ### POST /roberta/predict
-Analyse un texte avec le modele RoBERTa.
+Analyzes a text with the RoBERTa model.
 
 **Request:**
 ```json
@@ -153,15 +153,15 @@ Analyse un texte avec le modele RoBERTa.
   "summary": {
     "severity_score": 0.95,
     "detected_categories": ["toxic", "insult"],
-    "severity_level": "Tres eleve"
+    "severity_level": "Very high"
   },
   "model": "RoBERTa"
 }
 ```
 
-## Processus d'Entrainement
+## Training Process
 
-### 1. Chargement du modele pre-entraine
+### 1. Loading the pretrained model
 ```python
 from transformers import AutoModelForSequenceClassification, AutoTokenizer
 
@@ -170,7 +170,7 @@ tokenizer = AutoTokenizer.from_pretrained(model_name)
 model = AutoModelForSequenceClassification.from_pretrained(model_name)
 ```
 
-### 2. Tokenisation
+### 2. Tokenization
 ```python
 def tokenize_text(text):
     return tokenizer(
@@ -195,7 +195,7 @@ def predict(text):
     return probs.numpy()
 ```
 
-### 4. Fine-tuning (optionnel)
+### 4. Fine-tuning (optional)
 ```python
 from transformers import Trainer, TrainingArguments
 
@@ -218,28 +218,28 @@ trainer = Trainer(
 trainer.train()
 ```
 
-## Comparaison XGBoost vs RoBERTa
+## XGBoost vs RoBERTa
 
 | Aspect | XGBoost | RoBERTa |
 |--------|---------|---------|
 | F1-Score | 0.76 | 0.80 |
-| Latence | ~50ms | ~300ms |
+| Latency | ~50ms | ~300ms |
 | RAM | ~512MB | ~2GB |
-| Contexte | Limite | Excellent |
-| Sarcasme | Faible | Modere |
-| Cold start | ~1s | ~5-10s |
+| Context | Limited | Excellent |
+| Sarcasm | Weak | Moderate |
+| Cold start | ~1s | ~5 to 10s |
 
-## Cas d'Usage Recommandes
+## Recommended Use Cases
 
-- **Haute precision**: Quand la qualite prime sur la vitesse
-- **Contenu complexe**: Textes longs ou nuances
-- **Moderation approfondie**: Deuxieme passe apres XGBoost
-- **Analyse de sentiment**: Comprehension fine du contexte
+- **High accuracy**: when quality matters more than speed
+- **Complex content**: long or nuanced texts
+- **In-depth moderation**: second pass after XGBoost
+- **Sentiment analysis**: fine-grained contextual understanding
 
-## URLs de Production
+## Production URLs
 
-- **API Endpoint**: `https://0hik6heuhc.execute-api.us-east-1.amazonaws.com/prod/roberta/`
-- **Health Check**: `https://0hik6heuhc.execute-api.us-east-1.amazonaws.com/prod/roberta/health`
+- **API endpoint**: `https://0hik6heuhc.execute-api.us-east-1.amazonaws.com/prod/roberta/`
+- **Health check**: `https://0hik6heuhc.execute-api.us-east-1.amazonaws.com/prod/roberta/health`
 
 ## References
 

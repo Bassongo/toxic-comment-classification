@@ -1,82 +1,82 @@
-# Documentation des Dashboards
+# Dashboards Documentation
 
-## Vue d'ensemble
+## Overview
 
-Le projet comprend 3 interfaces utilisateur deployees sur AWS S3:
+The project ships three user interfaces deployed on AWS S3:
 
-1. **Application Principale** - Analyseur de commentaires toxiques
-2. **Dashboard Comparatif** - Comparaison des 3 modeles en temps reel
-3. **Wikipedia Live** - Analyse en temps reel des modifications Wikipedia
+1. **Main application**: toxic comment analyzer
+2. **Comparison dashboard**: real-time comparison of the three models
+3. **Wikipedia Live**: real-time analysis of Wikipedia edits
 
-## 1. Application Principale (Analyseur)
+## 1. Main Application (Analyzer)
 
 ### Description
-Interface principale permettant d'analyser un commentaire avec le choix du modele.
+Primary interface for analyzing a single comment with a selectable model.
 
-### Fonctionnalites
-- Selection du modele (XGBoost, RoBERTa, Multilingue)
-- Saisie de texte libre
-- Affichage des resultats avec:
-  - Verdict (Toxique/Propre)
-  - Probabilite de toxicite
-  - Categories detectees (pour XGBoost/RoBERTa)
-  - Langue detectee (pour Multilingue)
-  - Niveau de confiance
+### Features
+- Model selection (XGBoost, RoBERTa, Multilingual)
+- Free text input
+- Result display with:
+  - Verdict (toxic / clean)
+  - Toxicity probability
+  - Detected categories (XGBoost and RoBERTa)
+  - Detected language (Multilingual)
+  - Confidence level
 
 ### Design
-- Theme: Rouge/Orange/Noir (theme toxicite)
-- Icone: Triangle d'avertissement
-- Gradient: Rouge sombre vers noir
+- Theme: red, orange and black (toxicity theme)
+- Icon: warning triangle
+- Gradient: dark red to black
 
 ### URL
 `http://toxic-classifier-frontend-836192637207.s3-website-us-east-1.amazonaws.com/`
 
 ---
 
-## 2. Dashboard Comparatif
+## 2. Comparison Dashboard
 
 ### Description
-Dashboard permettant de comparer les 3 modeles simultanement sur un meme texte.
+Dashboard for comparing the three models simultaneously on the same text.
 
-### Fonctionnalites
+### Features
 
-#### Statistiques Globales
-- Nombre total d'analyses
-- Commentaires toxiques detectes
-- Commentaires propres
-- Temps de reponse moyen
+#### Global statistics
+- Total number of analyses
+- Toxic comments detected
+- Clean comments
+- Average response time
 
-#### Cartes des Modeles
-Pour chaque modele (XGBoost, RoBERTa, Multilingue):
-- Indicateur de statut (En ligne/Hors ligne)
-- Nombre d'analyses effectuees
-- Temps de reponse moyen
-- Taux de toxicite detecte
-- Performance (F1/Langues)
+#### Model cards
+For each model (XGBoost, RoBERTa, Multilingual):
+- Status indicator (online / offline)
+- Number of analyses performed
+- Average response time
+- Detected toxicity rate
+- Performance (F1 or number of languages)
 
-#### Test Comparatif
-- Champ de saisie unique
-- Analyse simultanee par les 3 modeles
-- Affichage cote-a-cote des resultats
-- Barre de progression pour chaque modele
+#### Comparative test
+- Single input field
+- Simultaneous analysis by the three models
+- Side-by-side result display
+- Progress bar for each model
 
-#### Graphiques
-- **Pie Chart**: Repartition toxique/propre
-- **Bar Chart**: Comparaison des modeles
+#### Charts
+- **Pie chart**: toxic / clean split
+- **Bar chart**: model comparison
 
-#### Historique
-Tableau des 20 dernieres analyses avec:
-- Texte analyse
-- Resultat de chaque modele
-- Langue detectee
-- Heure
+#### History
+Table of the last 20 analyses, with:
+- Analyzed text
+- Result from each model
+- Detected language
+- Timestamp
 
 ### Design
-- Theme coherent avec l'application principale
-- Couleurs par modele:
-  - XGBoost: Vert (#10b981)
-  - RoBERTa: Rouge/Orange (#dc2626)
-  - Multilingue: Bleu (#2563eb)
+- Theme consistent with the main application
+- Colors per model:
+  - XGBoost: green (#10b981)
+  - RoBERTa: red and orange (#dc2626)
+  - Multilingual: blue (#2563eb)
 
 ### URL
 `http://toxic-classifier-frontend-836192637207.s3-website-us-east-1.amazonaws.com/dashboard.html`
@@ -86,51 +86,51 @@ Tableau des 20 dernieres analyses avec:
 ## 3. Wikipedia Live Analyzer
 
 ### Description
-Interface d'analyse en temps reel des modifications recentes de Wikipedia.
+Interface for real-time analysis of recent Wikipedia edits.
 
-### Fonctionnalites
+### Features
 
 #### Configuration
-- **Edition Wikipedia**: FR, EN, DE, ES, IT, AR
-- **Nombre de modifications**: 10, 25, 50, 100
-- **Modele d'analyse**: Multilingue (recommande), XGBoost, RoBERTa
+- **Wikipedia edition**: FR, EN, DE, ES, IT, AR
+- **Number of edits**: 10, 25, 50, 100
+- **Analysis model**: Multilingual (recommended), XGBoost, RoBERTa
 
-#### Controles
-- Bouton Lancer/Arreter l'analyse
-- Bouton Effacer les resultats
-- Barre de progression
+#### Controls
+- Start / stop analysis button
+- Clear results button
+- Progress bar
 
-#### Statistiques
-- Commentaires analyses
-- Toxiques detectes
-- Commentaires propres
-- Taux de toxicite (%)
+#### Statistics
+- Comments analyzed
+- Toxic comments detected
+- Clean comments
+- Toxicity rate (%)
 
-#### Graphiques
-- **Doughnut**: Repartition des resultats
-- **Line Chart**: Evolution en temps reel
+#### Charts
+- **Doughnut**: result distribution
+- **Line chart**: evolution in real time
 
-#### Liste des Commentaires
-- Filtrage: Tous / Toxiques / Propres
-- Pour chaque commentaire:
-  - Utilisateur Wikipedia
-  - Article modifie
-  - Date/heure
-  - Texte du commentaire de modification
-  - Badge toxique/propre
-  - Langue detectee
-  - Probabilite avec barre visuelle
+#### Comment list
+- Filtering: all / toxic / clean
+- For each comment:
+  - Wikipedia user
+  - Edited article
+  - Date and time
+  - Edit summary text
+  - Toxic / clean badge
+  - Detected language
+  - Probability with a visual bar
 
 ### Workflow
-1. Recuperation via API Wikipedia (`recentchanges`)
-2. Filtrage des modifications avec commentaires
-3. Analyse sequentielle via notre API
-4. Affichage en temps reel des resultats
+1. Retrieval through the Wikipedia API (`recentchanges`)
+2. Filtering of edits that carry a comment
+3. Sequential analysis through our API
+4. Real-time display of results
 
 ### Design
-- Theme coherent (rouge/orange/noir)
-- Icone Wikipedia SVG
-- Animations de chargement
+- Consistent theme (red, orange, black)
+- Wikipedia SVG icon
+- Loading animations
 
 ### URL
 `http://toxic-classifier-frontend-836192637207.s3-website-us-east-1.amazonaws.com/wikipedia.html`
@@ -139,41 +139,41 @@ Interface d'analyse en temps reel des modifications recentes de Wikipedia.
 
 ## Navigation
 
-Les 3 pages sont interconnectees via une barre de navigation commune:
+The three pages are linked through a shared navigation bar:
 
 ```
 ┌─────────────────────────────────────────────────────────────┐
-│  [Analyseur]    [Dashboard]    [Wikipedia Live]             │
+│  [Analyzer]     [Dashboard]    [Wikipedia Live]             │
 └─────────────────────────────────────────────────────────────┘
 ```
 
-- Lien actif: Fond rouge, texte blanc
-- Lien inactif: Texte rose clair, bordure au survol
+- Active link: red background, white text
+- Inactive link: light pink text, border on hover
 
 ---
 
-## Technologies Utilisees
+## Technologies Used
 
 ### Frontend
-- **React** (Application principale)
-- **Vanilla JS** (Dashboard, Wikipedia)
-- **Chart.js** - Graphiques interactifs
-- **Axios** - Requetes HTTP
-- **CSS3** - Animations et design
+- **React** (main application)
+- **Vanilla JS** (dashboard, Wikipedia)
+- **Chart.js**: interactive charts
+- **Axios**: HTTP requests
+- **CSS3**: animations and styling
 
 ### Backend
-- **AWS API Gateway** - Point d'entree API
-- **AWS Lambda** - Fonctions serverless
-- **Docker** - Conteneurisation
-- **FastAPI + Mangum** - Framework Python
+- **AWS API Gateway**: API entry point
+- **AWS Lambda**: serverless functions
+- **Docker**: containerization
+- **FastAPI + Mangum**: Python framework
 
-### Hebergement
-- **AWS S3** - Site statique
+### Hosting
+- **AWS S3**: static website
 - **URL**: `http://toxic-classifier-frontend-836192637207.s3-website-us-east-1.amazonaws.com`
 
 ---
 
-## Architecture Globale
+## Overall Architecture
 
 ```
                     ┌──────────────────────────────────────┐
@@ -203,23 +203,23 @@ Les 3 pages sont interconnectees via une barre de navigation commune:
 
 ## Maintenance
 
-### Deploiement Frontend
+### Frontend deployment
 ```bash
 # Build React
 cd deployment/frontend
 npm run build
 
-# Sync avec S3
+# Sync with S3
 aws s3 sync build/ s3://toxic-classifier-frontend-836192637207 --delete
 
-# Upload des pages statiques
+# Upload the static pages
 aws s3 cp dashboard/index.html s3://toxic-classifier-frontend-836192637207/dashboard.html
 aws s3 cp dashboard/wikipedia.html s3://toxic-classifier-frontend-836192637207/wikipedia.html
 ```
 
-### Verification Sante
+### Health check
 ```bash
-# Tester les endpoints
+# Test the endpoints
 curl https://0hik6heuhc.execute-api.us-east-1.amazonaws.com/prod/xgboost/health
 curl https://0hik6heuhc.execute-api.us-east-1.amazonaws.com/prod/roberta/health
 curl https://0hik6heuhc.execute-api.us-east-1.amazonaws.com/prod/multilingual/health

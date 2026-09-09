@@ -1,39 +1,39 @@
-# Modele Multilingue XLM-RoBERTa - Documentation
+# Multilingual XLM-RoBERTa Model: Documentation
 
-## Vue d'ensemble
+## Overview
 
-Le modele multilingue est base sur **XLM-RoBERTa** (Cross-lingual Language Model - RoBERTa), un transformer pre-entraine sur 100+ langues. Nous utilisons la version fine-tunee `unitary/multilingual-toxic-xlm-roberta` specialisee dans la detection de toxicite multilingue.
+The multilingual model is based on **XLM-RoBERTa** (Cross-lingual Language Model, RoBERTa), a transformer pretrained on more than 100 languages. We use the fine-tuned `unitary/multilingual-toxic-xlm-roberta` checkpoint, specialized in multilingual toxicity detection.
 
-## Caracteristiques Techniques
+## Technical Specifications
 
 ### Architecture
-| Parametre | Valeur |
-|-----------|--------|
-| Modele de base | XLM-RoBERTa |
-| Taille | ~560M parametres |
-| Langues supportees | 100+ |
-| Tache | Classification binaire (toxique/non-toxique) |
+| Parameter | Value |
+|-----------|-------|
+| Base model | XLM-RoBERTa |
+| Size | ~560M parameters |
+| Supported languages | 100+ |
+| Task | Binary classification (toxic / clean) |
 | Max tokens | 512 |
 
-### Langues Principales Supportees
-- **Francais (FR)** - Langue cible principale
-- **Anglais (EN)** - Langue de reference
-- **Arabe (AR)** - Support RTL (droite a gauche)
-- **Espagnol, Allemand, Italien, Portugais, Russe, Chinois, Japonais...**
+### Main supported languages
+- **French (FR)**: primary target language
+- **English (EN)**: reference language
+- **Arabic (AR)**: RTL (right to left) support
+- **Spanish, German, Italian, Portuguese, Russian, Chinese, Japanese and others**
 
-## Comparaison des Modeles
+## Model Comparison
 
-| Caracteristique | XGBoost | RoBERTa | XLM-RoBERTa Multilingue |
-|-----------------|---------|---------|-------------------------|
-| Type | ML Classique | Deep Learning | Deep Learning |
-| Langues | Anglais | Anglais | 100+ langues |
-| Categories | 6 labels | 6 labels | Binaire (toxic/clean) |
-| Vitesse | Tres rapide | Rapide | Moderee |
-| Cold Start | ~1s | ~5s | ~30-45s |
-| Precision (EN) | F1: 0.76 | F1: 0.80 | Comparable |
-| Cas d'usage | Production rapide | Precision EN | Multilingue |
+| Characteristic | XGBoost | RoBERTa | Multilingual XLM-RoBERTa |
+|----------------|---------|---------|--------------------------|
+| Type | Classical ML | Deep learning | Deep learning |
+| Languages | English | English | 100+ languages |
+| Categories | 6 labels | 6 labels | Binary (toxic / clean) |
+| Speed | Very fast | Fast | Moderate |
+| Cold start | ~1s | ~5s | ~30 to 45s |
+| Accuracy (EN) | F1: 0.76 | F1: 0.80 | Comparable |
+| Use case | Fast production | English accuracy | Multilingual |
 
-## Architecture de Deploiement AWS
+## AWS Deployment Architecture
 
 ```
 ┌─────────────────────────────────────────────────────────────────┐
@@ -45,15 +45,15 @@ Le modele multilingue est base sur **XLM-RoBERTa** (Cross-lingual Language Model
 ┌─────────────────────────────────────────────────────────────────┐
 │                      AWS Lambda                                  │
 │  ┌────────────────────────────────────────────────────────┐     │
-│  │                  Container Docker                       │     │
+│  │                  Docker container                       │     │
 │  │  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  │     │
 │  │  │   FastAPI    │  │   PyTorch    │  │ Transformers │  │     │
 │  │  │   + Mangum   │  │   (CPU)      │  │   HuggingFace│  │     │
 │  │  └──────────────┘  └──────────────┘  └──────────────┘  │     │
 │  │                                                         │     │
 │  │  ┌──────────────────────────────────────────────────┐  │     │
-│  │  │        XLM-RoBERTa Model (~1.1GB)                │  │     │
-│  │  │        Pre-telecharge dans l'image               │  │     │
+│  │  │        XLM-RoBERTa model (~1.1GB)                │  │     │
+│  │  │        Pre-downloaded into the image             │  │     │
 │  │  └──────────────────────────────────────────────────┘  │     │
 │  └────────────────────────────────────────────────────────┘     │
 │                                                                  │
@@ -64,7 +64,7 @@ Le modele multilingue est base sur **XLM-RoBERTa** (Cross-lingual Language Model
 ## API Endpoints
 
 ### POST /multilingual/predict
-Analyse un texte dans n'importe quelle langue supportee.
+Analyzes a text in any supported language.
 
 **Request:**
 ```json
@@ -78,14 +78,14 @@ Analyse un texte dans n'importe quelle langue supportee.
 {
   "is_toxic": true,
   "toxic_probability": 0.9846,
-  "confidence": "Tres eleve",
+  "confidence": "Very high",
   "language_detected": "fr",
   "model": "XLM-RoBERTa Multilingual"
 }
 ```
 
 ### POST /multilingual/predict/batch
-Analyse plusieurs textes en une seule requete.
+Analyzes several texts in a single request.
 
 **Request:**
 ```json
@@ -99,50 +99,50 @@ Analyse plusieurs textes en une seule requete.
 ```
 
 ### GET /multilingual/health
-Verifie l'etat du service.
+Returns the health status of the service.
 
-## Exemples de Detection par Langue
+## Detection Examples by Language
 
-### Francais
-| Texte | Toxique | Probabilite |
-|-------|---------|-------------|
-| "Tu es vraiment stupide!" | Oui | 98.5% |
-| "Merci beaucoup pour cette aide!" | Non | 0.1% |
-| "Je vais te tuer!" | Oui | 99.2% |
+### French
+| Text | Toxic | Probability |
+|------|-------|-------------|
+| "Tu es vraiment stupide!" (You are really stupid) | Yes | 98.5% |
+| "Merci beaucoup pour cette aide!" (Thank you for the help) | No | 0.1% |
+| "Je vais te tuer!" (I am going to kill you) | Yes | 99.2% |
 
-### Anglais
-| Texte | Toxique | Probabilite |
-|-------|---------|-------------|
-| "You are stupid!" | Oui | 99.2% |
-| "Great article, thanks!" | Non | 0.05% |
+### English
+| Text | Toxic | Probability |
+|------|-------|-------------|
+| "You are stupid!" | Yes | 99.2% |
+| "Great article, thanks!" | No | 0.05% |
 
-### Arabe
-| Texte | Toxique | Probabilite |
-|-------|---------|-------------|
-| "انت غبي" (Tu es stupide) | Oui | ~85% |
-| "شكرا جزيلا" (Merci beaucoup) | Non | 0.1% |
+### Arabic
+| Text | Toxic | Probability |
+|------|-------|-------------|
+| "انت غبي" (You are stupid) | Yes | ~85% |
+| "شكرا جزيلا" (Thank you very much) | No | 0.1% |
 
-## Optimisations Implementees
+## Implemented Optimizations
 
-### 1. Pre-chargement du Modele
-Le modele est telecharge et stocke dans l'image Docker pendant le build, evitant les telechargements au runtime.
+### 1. Model preloading
+The model is downloaded and stored in the Docker image at build time, which avoids downloads at runtime.
 
 ```dockerfile
 ENV HF_HOME=/var/task/hf_cache
 RUN python -c "AutoModelForSequenceClassification.from_pretrained(...)"
 ```
 
-### 2. Chargement Eager
-Le modele est charge au demarrage du module Python, pas a la premiere requete.
+### 2. Eager loading
+The model is loaded when the Python module starts, not on the first request.
 
 ```python
-# Pre-charger le modele au demarrage
+# Preload the model at startup
 tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME, local_files_only=True)
 model = AutoModelForSequenceClassification.from_pretrained(MODEL_NAME, local_files_only=True)
 ```
 
-### 3. Compatibilite NumPy
-Utilisation de NumPy < 2.0 pour eviter les incompatibilites avec PyTorch.
+### 3. NumPy compatibility
+NumPy below 2.0 is pinned to avoid incompatibilities with PyTorch.
 
 ```dockerfile
 RUN pip install --no-cache-dir "numpy<2"
@@ -150,25 +150,25 @@ RUN pip install --no-cache-dir "numpy<2"
 
 ## Limitations
 
-1. **Cold Start**: ~30-45 secondes au premier appel (chargement du modele en memoire)
-2. **Classification Binaire**: Contrairement aux autres modeles, ne fournit pas de categories detaillees
-3. **Cout**: Lambda avec 3GB de RAM = cout plus eleve
-4. **Timeout API Gateway**: 29 secondes max, peut echouer sur cold start
+1. **Cold start**: ~30 to 45 seconds on the first call (loading the model into memory)
+2. **Binary classification**: unlike the other models, it does not return detailed categories
+3. **Cost**: a Lambda with 3 GB of RAM is more expensive to run
+4. **API Gateway timeout**: 29 seconds maximum, which can fail on a cold start
 
-## Ameliorations Futures Possibles
+## Possible Future Improvements
 
-1. **Provisioned Concurrency**: Garder des instances Lambda chaudes
-2. **EFS**: Stocker le modele sur EFS pour un chargement plus rapide
-3. **SageMaker Endpoint**: Pour une latence plus stable
-4. **Distillation**: Utiliser un modele distille plus leger
+1. **Provisioned concurrency**: keep Lambda instances warm
+2. **EFS**: store the model on EFS for faster loading
+3. **SageMaker endpoint**: for more stable latency
+4. **Distillation**: use a lighter distilled model
 
-## URLs de Production
+## Production URLs
 
-- **API Endpoint**: `https://0hik6heuhc.execute-api.us-east-1.amazonaws.com/prod/multilingual/`
+- **API endpoint**: `https://0hik6heuhc.execute-api.us-east-1.amazonaws.com/prod/multilingual/`
 - **Frontend**: `http://toxic-classifier-frontend-836192637207.s3-website-us-east-1.amazonaws.com`
 
 ## References
 
 - [XLM-RoBERTa Paper](https://arxiv.org/abs/1911.02116)
-- [Modele HuggingFace](https://huggingface.co/unitary/multilingual-toxic-xlm-roberta)
+- [Hugging Face Model](https://huggingface.co/unitary/multilingual-toxic-xlm-roberta)
 - [AWS Lambda Container Images](https://docs.aws.amazon.com/lambda/latest/dg/images-create.html)
