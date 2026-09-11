@@ -1,28 +1,23 @@
-# 🛡️ Toxic Comment Classification
+# Toxic Comment Classification
 
-> Multi-label toxicity detection system with 3 ML models deployed on AWS — from classical ML to multilingual Transformers.
+> Multi-label toxicity detection with 3 ML models, from a classical baseline to a multilingual Transformer, deployed as independent serverless microservices.
 
-[![Live Demo](https://img.shields.io/badge/Demo-Live-brightgreen)](http://toxic-classifier-frontend-836192637207.s3-website-us-east-1.amazonaws.com)
 [![AWS Lambda](https://img.shields.io/badge/AWS-Lambda-orange)](https://aws.amazon.com/lambda/)
 [![Python](https://img.shields.io/badge/Python-3.11-blue)](https://www.python.org/)
-[![HuggingFace](https://img.shields.io/badge/🤗-Transformers-yellow)](https://huggingface.co/)
+[![HuggingFace](https://img.shields.io/badge/Transformers-yellow)](https://huggingface.co/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+
+> **Deployment status.** This system ran in production on AWS (Lambda, API Gateway, S3) until July 2026, when the hosting account was closed. The public demo and API endpoints are therefore offline. The models, training notebooks, Docker images and deployment code below are complete and reproducible from this repository.
 
 ---
 
 ## Overview
 
-This project builds a production-ready **multi-label toxic comment classifier** that detects 6 categories of harmful content in text. Three models — ranging from a fast classical ML baseline to a 560M-parameter multilingual Transformer — are each deployed as independent AWS Lambda microservices behind a unified API Gateway.
+This project builds a **multi-label toxic comment classifier** that detects 6 categories of harmful content in text. Three models, ranging from a fast classical ML baseline to a 560M-parameter multilingual Transformer, were each deployed as independent AWS Lambda microservices behind a unified API Gateway.
 
-The system includes a **real-time Wikipedia edit analyzer**, monitoring toxicity across 6 language editions (EN, FR, DE, ES, IT, AR) — directly relevant to content moderation at scale, a core challenge in AI Safety.
+The system included a **real-time Wikipedia edit analyzer**, monitoring toxicity across 6 language editions (EN, FR, DE, ES, IT, AR), directly relevant to content moderation at scale.
 
-**🔗 Live Application** : [toxic-classifier-frontend](http://toxic-classifier-frontend-836192637207.s3-website-us-east-1.amazonaws.com)
-
-| Page | Description |
-|------|-------------|
-| [Analyzer](http://toxic-classifier-frontend-836192637207.s3-website-us-east-1.amazonaws.com) | Real-time comment analysis with model selection |
-| [Dashboard](http://toxic-classifier-frontend-836192637207.s3-website-us-east-1.amazonaws.com/dashboard.html) | Side-by-side comparison of all 3 models |
-| [Wikipedia Live](http://toxic-classifier-frontend-836192637207.s3-website-us-east-1.amazonaws.com/wikipedia.html) | Live toxicity monitoring of Wikipedia edits |
+The three front-end pages were an analyzer for single comments, a dashboard comparing the three models side by side, and the live Wikipedia monitor. Their source is in `deployment/frontend/` and `deployment/dashboard/`.
 
 ---
 
@@ -30,22 +25,24 @@ The system includes a **real-time Wikipedia edit analyzer**, monitoring toxicity
 
 | Model | F1-Score | Latency | Languages | Size |
 |-------|----------|---------|-----------|------|
-| XGBoost + TF-IDF | 0.76 | ~50ms | English | — |
+| XGBoost + TF-IDF | 0.76 | ~50ms | English | small |
 | RoBERTa | **0.80** | ~300ms | English | 125M params |
 | XLM-RoBERTa | ~0.78 | ~400ms | **100+** | 560M params |
 
 > **Best accuracy** : RoBERTa (F1 = 0.80) · **Best multilingual coverage** : XLM-RoBERTa (100+ languages)
 
+Scores are measured on a held-out split of the Jigsaw dataset. Performance on live, adversarial content is lower: see Limitations.
+
 ---
 
-## AI Safety Relevance
+## Why this problem matters
 
-Toxic content detection is a foundational problem in **AI Safety and content moderation** :
+Toxic content detection is a foundational problem in content moderation at scale :
 
 - **Scalable oversight** : automated flagging of harmful content reduces human reviewer burden
-- **Multilingual coverage** : XLM-RoBERTa enables safety monitoring beyond English-centric systems
-- **Model comparison** : the dashboard exposes tradeoffs between speed, accuracy, and coverage — critical for deployment decisions
-- **Real-world grounding** : Wikipedia live monitoring tests the system on genuine adversarial content
+- **Multilingual coverage** : XLM-RoBERTa enables monitoring beyond English-centric systems
+- **Model comparison** : the dashboard exposes tradeoffs between speed, accuracy and coverage, which is what actually drives a deployment decision
+- **Real-world grounding** : Wikipedia live monitoring tested the system on genuine adversarial content rather than a curated test set
 
 ---
 
@@ -88,13 +85,13 @@ Toxic content detection is a foundational problem in **AI Safety and content mod
   └──────────────┘ └──────────────┘ └──────────────┘
 ```
 
-Each model runs in an isolated Docker container on AWS Lambda, enabling independent scaling and versioning.
+Each model ran in an isolated Docker container on AWS Lambda, enabling independent scaling and versioning.
 
 ---
 
 ## API Reference
 
-**Base URL** : `https://0hik6heuhc.execute-api.us-east-1.amazonaws.com/prod`
+The endpoints below describe the deployed REST contract. They are documented for reference and for anyone redeploying the stack; the original base URL is no longer served.
 
 | Endpoint | Method | Model |
 |----------|--------|-------|
@@ -105,7 +102,7 @@ Each model runs in an isolated Docker container on AWS Lambda, enabling independ
 
 **Request**
 ```bash
-curl -X POST https://0hik6heuhc.execute-api.us-east-1.amazonaws.com/prod/multilingual/predict \
+curl -X POST https://<your-api-gateway>/prod/multilingual/predict \
   -H "Content-Type: application/json" \
   -d '{"text": "You are absolutely worthless."}'
 ```
@@ -139,7 +136,9 @@ toxic-comment-classification/
 ├── documentation/
 │   ├── XGBOOST_MODEL.md
 │   ├── ROBERTA_MODEL.md
-│   └── MULTILINGUAL_MODEL.md
+│   ├── MULTILINGUAL_MODEL.md
+│   └── DASHBOARD_DOCS.md
+├── notebooks/
 └── README.md
 ```
 
@@ -177,23 +176,23 @@ docker push <account>.dkr.ecr.us-east-1.amazonaws.com/toxic-xgboost:latest
 
 ## Limitations & Future Work
 
-- **F1 ceiling** : XGBoost (0.76) struggles on minority labels (`severe_toxic`, `threat`) — upsampling or cost-sensitive learning could help
-- **African languages** : XLM-RoBERTa covers Swahili but not Wolof, Bambara, or Mooré — a natural extension given the African NLP gap
-- **RLHF integration** : the classifier could serve as a reward signal in a Constitutional AI-style training loop
+- **Benchmark scores are not production scores** : the Jigsaw dataset is curated and English-centric; live moderation traffic is imbalanced, adversarial and drifts
+- **F1 ceiling** : XGBoost (0.76) struggles on minority labels (`severe_toxic`, `threat`); upsampling or cost-sensitive learning could help
+- **African languages** : XLM-RoBERTa covers Swahili but not Wolof, Bambara or Mooré, a natural extension given the African NLP gap
 - **Evaluation depth** : adding AUC-ROC per label and calibration curves would better expose model reliability
 
 ---
 
 ## Author
 
-**Marc MARE** — Statistics & ML Engineer  
-ENSAE Dakar | MSc SEP, University of Reims (2026)  
+**Marc MARE**, Statistics & ML Engineer
+ENSAE Dakar | MSc SEP, University of Reims (2026)
 
-[![LinkedIn](https://img.shields.io/badge/LinkedIn-Marc_MARE-0077B5?style=flat&logo=linkedin)](https://www.linkedin.com/in/marc-mare-4875a6277)
+[![LinkedIn](https://img.shields.io/badge/LinkedIn-Marc_MARE-0077B5?style=flat&logo=linkedin)](https://www.linkedin.com/in/marc-mare-data)
 [![GitHub](https://img.shields.io/badge/GitHub-Bassongo-181717?style=flat&logo=github)](https://github.com/Bassongo)
 
 ---
 
 ## License
 
-MIT License — see [LICENSE](LICENSE) for details.
+MIT License, see [LICENSE](LICENSE) for details.
