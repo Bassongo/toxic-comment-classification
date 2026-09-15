@@ -22,14 +22,30 @@ The three front-end pages were an analyzer for single comments, a dashboard comp
 ---
 
 ## Key Results
+| Model | F1 micro | F1 macro | Latency | Languages | Size |
+|-------|----------|----------|---------|-----------|------|
+| XGBoost + TF-IDF (shipped model) | not measured | **0.547** | ~50ms | English | small |
+| XGBoost + TF-IDF (best notebook run) | 0.706 | 0.676 | ~50ms | English | small |
+| RoBERTa | **0.798** | 0.678 | ~300ms | English | 125M params |
+| XLM-RoBERTa | not evaluated | not evaluated | ~400ms | **100+** | 560M params |
 
-| Model | F1-Score | Latency | Languages | Size |
-|-------|----------|---------|-----------|------|
-| XGBoost + TF-IDF | 0.76 | ~50ms | English | small |
-| RoBERTa | **0.80** | ~300ms | English | 125M params |
-| XLM-RoBERTa | ~0.78 | ~400ms | **100+** | 560M params |
+RoBERTa figures are taken from the saved training metrics (3 epochs, batch size 16, learning rate 1e-5, Hamming loss 0.0151). XGBoost figures come from the per-label evaluation in the training notebooks.
 
-> **Best accuracy** : RoBERTa (F1 = 0.80) · **Best multilingual coverage** : XLM-RoBERTa (100+ languages)
+### XGBoost per label, shipped model with tuned thresholds
+
+| Label | Threshold | F1 | ROC-AUC |
+|-------|-----------|----|---------|
+| `toxic` | 0.40 | 0.612 | 0.948 |
+| `severe_toxic` | 0.70 | 0.430 | 0.960 |
+| `obscene` | 0.50 | 0.794 | 0.968 |
+| `threat` | 0.65 | 0.290 | 0.954 |
+| `insult` | 0.55 | 0.703 | 0.955 |
+| `identity_hate` | 0.75 | 0.453 | 0.939 |
+| **macro average** | | **0.547** | **0.954** |
+
+The gap between micro and macro F1 is the whole story of this dataset. Micro F1 is carried by `toxic`, `obscene` and `insult`, which dominate the label counts. Macro F1 gives `threat` the same weight as `toxic`, and `threat` is where every model here fails. A single headline F1 hides that, which is why both are reported above.
+
+> **Correction, September 2026.** An earlier version of this README reported F1 = 0.76 for XGBoost and F1 = 0.80 for RoBERTa, both labelled macro. Re-reading the notebooks, the 0.80 is a **micro** F1: RoBERTa's macro F1 is 0.678. The 0.76 for XGBoost is not reproduced by any run in this repository. A figure of ~0.78 was also given for XLM-RoBERTa, which was deployed but never evaluated on a held-out split. The tables above are read directly from the saved metrics and the notebook outputs.
 
 Scores are measured on a held-out split of the Jigsaw dataset. Performance on live, adversarial content is lower: see Limitations.
 
@@ -64,7 +80,6 @@ Toxic content detection is a foundational problem in content moderation at scale
 ---
 
 ## Architecture
-
 ```
 ┌─────────────────────────────────────┐
 │         AWS S3 (Frontend)           │
@@ -121,7 +136,6 @@ curl -X POST https://<your-api-gateway>/prod/multilingual/predict \
 ---
 
 ## Project Structure
-
 ```
 toxic-comment-classification/
 ├── deployment/
@@ -177,7 +191,8 @@ docker push <account>.dkr.ecr.us-east-1.amazonaws.com/toxic-xgboost:latest
 ## Limitations & Future Work
 
 - **Benchmark scores are not production scores** : the Jigsaw dataset is curated and English-centric; live moderation traffic is imbalanced, adversarial and drifts
-- **F1 ceiling** : XGBoost (0.76) struggles on minority labels (`severe_toxic`, `threat`); upsampling or cost-sensitive learning could help
+- **Minority labels are where this fails** : the shipped XGBoost model reaches 0.547 macro F1, dragged down by `threat` (0.290) and `severe_toxic` (0.430); cost-sensitive learning or targeted augmentation is the next step
+- **XLM-RoBERTa was never evaluated** : it was trained, containerised and served, but no held-out score was ever computed for it, so every multilingual claim in this repository is untested
 - **African languages** : XLM-RoBERTa covers Swahili but not Wolof, Bambara or Mooré, a natural extension given the African NLP gap
 - **Evaluation depth** : adding AUC-ROC per label and calibration curves would better expose model reliability
 
